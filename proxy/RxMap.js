@@ -1,45 +1,53 @@
-import EventEmitter from 'events'
+import EventEmitter from 'eventemitter3'
 import isPromise from 'p-is-promise'
 
-export default class RxMap {
-  constructor(option) {
-    this.map = option.map || new Map()
-    this.emitter = option.emitter || new EventEmitter()
+export default class RxMap extends Map {
+  constructor(iterable) {
+    super(iterable)
+    this.emitter = new EventEmitter()
   }
 
-  get(key) {
-    const cache = this.map.get(key)
-    return cache ? cache.data : undefined
+  baseSet(key, value) {
+    return super.set(key, value)
+  }
+  baseDelete(key) {
+    return super.delete(key)
+  }
+  baseClear() {
+    return super.clear()
   }
 
-  set(key, data) {
-    const { map, emitter } = this
-    if (data === undefined) {
-      map.delete(key)
-    } else {
-      map.set(key, { data, setAt: Date() })
+  set(key, value) {
+    const oldValue = this.get()
+    if (oldValue !== value) {
+      super.set(key, value)
+      if (isPromise(value)) {
+        value.then(v => this.emit(key, v)).catch(err => this.emit(key, undefined, err))
+      } else {
+        this.emit(key, value)
+      }
     }
-
-    if (isPromise(data)) {
-      // Remove rejected promises from cache
-      // data.catch(() => map.delete(key))
-      data.then(data => emitter.emit(key, data))
-    } else {
-      emitter.emit(key, data)
-    }
-    return data
+    return this
   }
 
   delete(key) {
-    this.set(key, undefined)
+    const hasDel = super.delete(key)
+    if (hasDel) {
+      this.emit(key, undefined)
+    }
+    return hasDel
   }
 
   clear() {
-    const keys = [...this.map.keys()]
-    this.map.clear()
-    keys.forEach(key => {
-      this.emitter.emit(key, undefined)
+    super.clear()
+    const { emitter } = this
+    emitter.eventNames().forEach(key => {
+      emitter.emit(key, undefined)
     })
+  }
+
+  emit(key, value) {
+    this.emitter.emit(key, value)
   }
 
   watch(key, onNext /* , onError, onCompletion */) {
