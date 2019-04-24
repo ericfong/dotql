@@ -1,6 +1,6 @@
 {
   "name": "dotql",
-  "description": "Like graphql but query by plain json. No more DSL or AST parsing",
+  "description": "graphql like but query by plain json. No more DSL or AST parsing",
   "version": "0.8.3",
   "license": "MIT",
   "main": "index.js",
@@ -42,9 +42,9 @@
   "keywords": [
     "graphql",
     "graphql-js",
-    "template",
-    "render",
-    "generate"
+    "json",
+    "query",
+    "cache"
   ],
   "repository": {
     "type": "git",
