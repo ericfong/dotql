@@ -1,6 +1,6 @@
 import _ from 'lodash'
 
-export const serverTestConf = {
+const serverTestConf = {
   schema: {
     Template: {
       id: {
@@ -43,3 +43,4 @@ export const serverTestConf = {
     },
   },
 }
+export default serverTestConf

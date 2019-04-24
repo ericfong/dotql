@@ -2,10 +2,10 @@ import createProxy from './createProxy'
 import defaultEnhancers from './defaultEnhancers'
 
 import createServer from '../server/createServer'
-import { serverTestConf } from '../server/testConfig'
+import serverConf from '../test/serverConf'
 
 test('http', async () => {
-  const server = createServer(serverTestConf)
+  const server = createServer(serverConf)
   const callServer = jest.fn(specs => {
     return server.query(specs)
   })

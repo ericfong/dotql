@@ -7,10 +7,6 @@ import isPromise from 'p-is-promise'
 import { enhance } from '../util'
 
 const proxyFuncs = {
-  toCacheKey(args) {
-    return _.isString(args) ? args : stringify(args)
-  },
-
   getCache(key) {
     const { map } = this
     const cache = map.get(key)
@@ -36,6 +32,7 @@ const proxyFuncs = {
     return promise
   },
 
+  // ----------------------------------------------------------------------------------------------
   // cache-first, cache-and-network, network-only, cache-only, no-cache
   // keyv ttl || mem maxAge
 
@@ -49,25 +46,28 @@ const proxyFuncs = {
     return this.setCache(key, promise, option)
   },
 
-  query(spec, option = {}) {
-    const key = this.toCacheKey(spec)
-    return this.getByKey(key, spec, option)
+  getCacheKey(args) {
+    return _.isString(args) ? args : stringify(args)
   },
 
-  get(args, option) {
-    const key = this.toCacheKey(args)
+  // two main entry point for end-user
+  query(args, option = {}) {
+    const key = this.getCacheKey(args)
     return this.getByKey(key, args, option)
   },
 
+  // two main entry point for end-user
   onSnapshot(args, option, onNext /* , onError, onCompletion */) {
     const { emitter } = this
-    const key = this.toCacheKey(args)
+    const key = this.getCacheKey(args)
     Promise.resolve(this.getByKey(key, args, option)).then(onNext)
     emitter.on(key, onNext)
     return () => {
       emitter.removeListener(key, onNext)
     }
   },
+
+  // ----------------------------------------------------------------------------------------------
 }
 
 const createProxy = (option, enhancers) => {
@@ -75,5 +75,4 @@ const createProxy = (option, enhancers) => {
   const proxy = { ...option, map: option.map || new Map(), emitter: option.emitter || new EventEmitter(), ...proxyFuncs }
   return enhance(proxy, enhancers)
 }
-
 export default createProxy

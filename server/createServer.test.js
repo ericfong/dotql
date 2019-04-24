@@ -1,9 +1,9 @@
 // import _ from 'lodash'
 
 import createServer from './createServer'
-import { serverTestConf } from './testConfig'
+import serverConf from '../test/serverConf'
 
-const server = createServer(serverTestConf)
+const server = createServer(serverConf)
 
 test('Mutations', async () => {
   expect(

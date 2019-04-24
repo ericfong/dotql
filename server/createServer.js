@@ -15,7 +15,7 @@ const QUERIES_TYPE = 'Queries'
 const MUTATIONS_TYPE = 'Mutations'
 
 const serverFuncs = {
-  doFieldResolve(dot, spec, context, info) {
+  resolveField(dot, spec, context, info) {
     const { field, client } = info
     return field.resolve.call(client, dot, spec[ARGUMENTS_KEY] || spec[WHERE_KEY], context, info)
   },
@@ -55,8 +55,8 @@ const serverFuncs = {
 
         const resolveAs = spec[AS_KEY] || fieldName
 
-        // doFieldResolve
-        const result = await client.doFieldResolve(dot, spec, context, {
+        // resolveField
+        const result = await client.resolveField(dot, spec, context, {
           client,
           field,
           fieldName,
@@ -94,6 +94,9 @@ const serverFuncs = {
     return dot
   },
 
+  // ----------------------------------------------------------------------------------------------
+
+  // two main entry point for end-user
   get(spec, context = {}) {
     // console.log('>>server', spec)
     const client = this
@@ -102,20 +105,32 @@ const serverFuncs = {
     return client.resolve(dot, isMutation ? _.omit(spec, MUTATE_KEY) : spec, context)
   },
 
-  normalizeSpec(args) {
+  // onSnapshot(args, option, onNext /* , onError, onCompletion */) {},
+
+  // ----------------------------------------------------------------------------------------------
+
+  queryNormalizeSpec(args) {
     if (_.isArray(args)) return _.head(args)
     // string = prepared query
     return args
   },
 
+  // rename to batch
   query(specs, context = {}) {
     // console.log('>> server.query', specs)
     if (specs.$batch) {
-      return Promise.all(_.map(specs.$batch, spec => this.get(this.normalizeSpec(spec), context)))
+      return Promise.all(_.map(specs.$batch, spec => this.get(this.queryNormalizeSpec(spec), context)))
     }
-    return this.get(this.normalizeSpec(specs), context)
+    return this.get(this.queryNormalizeSpec(specs), context)
   },
 }
+
+/*
+Call Sequence
+- query
+- get
+- resolve
+*/
 
 const createServer = (option, enhancers) => {
   const client = { ...option, ...serverFuncs }
