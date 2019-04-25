@@ -10,14 +10,25 @@ const WHERE_KEY = '$where'
 const ARGUMENTS_KEY = '$args'
 const MUTATE_KEY = '$mutate'
 const AS_KEY = '$as'
-const OPERATORS = { [WHERE_KEY]: 1, [ARGUMENTS_KEY]: 1, [MUTATE_KEY]: 1, [AS_KEY]: 1 }
+const OPERATORS = {
+  [WHERE_KEY]: 1,
+  [ARGUMENTS_KEY]: 1,
+  [MUTATE_KEY]: 1,
+  [AS_KEY]: 1,
+}
 const QUERIES_TYPE = 'Queries'
 const MUTATIONS_TYPE = 'Mutations'
 
 const serverFuncs = {
   resolveField(dot, spec, context, info) {
     const { field, client } = info
-    return field.resolve.call(client, dot, spec[ARGUMENTS_KEY] || spec[WHERE_KEY], context, info)
+    return field.resolve.call(
+      client,
+      dot,
+      spec[ARGUMENTS_KEY] || spec[WHERE_KEY],
+      context,
+      info,
+    )
   },
 
   async resolve(dot, specs, context) {
@@ -35,7 +46,10 @@ const serverFuncs = {
     const mutateAction = specs[MUTATE_KEY]
     if (mutateAction) {
       const mutateFunc = Type[MUTATE_KEY]
-      assert(mutateFunc, `"${MUTATE_KEY}" function is missing in Type "${typename}"`)
+      assert(
+        mutateFunc,
+        `"${MUTATE_KEY}" function is missing in Type "${typename}"`,
+      )
       await mutateFunc.call(client, dot, mutateAction, context)
     }
 
@@ -78,7 +92,7 @@ const serverFuncs = {
                 // eslint-disable-next-line no-param-reassign
                 item.__typename = itemType
                 return client.resolve(item, spec, context)
-              })
+              }),
             )
           } else {
             result.__typename = field.type
@@ -87,7 +101,7 @@ const serverFuncs = {
           // eslint-disable-next-line no-param-reassign
           dot[resolveAs] = newResult
         }
-      })
+      }),
     )
 
     // console.log('resolveRecursive-out:', dot, specs)
@@ -102,7 +116,11 @@ const serverFuncs = {
     const client = this
     const isMutation = spec.__typename === MUTATIONS_TYPE || spec[MUTATE_KEY]
     const dot = { __typename: isMutation ? MUTATIONS_TYPE : QUERIES_TYPE }
-    return client.resolve(dot, isMutation ? _.omit(spec, MUTATE_KEY) : spec, context)
+    return client.resolve(
+      dot,
+      isMutation ? _.omit(spec, MUTATE_KEY) : spec,
+      context,
+    )
   },
 
   // onSnapshot(args, option, onNext /* , onError, onCompletion */) {},
@@ -119,7 +137,11 @@ const serverFuncs = {
   query(specs, context = {}) {
     // console.log('>> server.query', specs)
     if (specs.$batch) {
-      return Promise.all(_.map(specs.$batch, spec => this.get(this.queryNormalizeSpec(spec), context)))
+      return Promise.all(
+        _.map(specs.$batch, spec =>
+          this.get(this.queryNormalizeSpec(spec), context),
+        ),
+      )
     }
     return this.get(this.queryNormalizeSpec(specs), context)
   },

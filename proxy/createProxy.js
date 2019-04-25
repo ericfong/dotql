@@ -94,7 +94,7 @@ export const withBatch = Base =>
     }
   }
 
-const defaultEnhancers = [withProxy, withBatch]
+export const defaultEnhancers = [withProxy, withBatch]
 
 const createProxy = (option, enhancers = defaultEnhancers) => new (enhance(Object, enhancers))(option)
 export default createProxy
