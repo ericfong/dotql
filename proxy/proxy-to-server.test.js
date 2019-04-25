@@ -1,5 +1,4 @@
 import createProxy from './createProxy'
-import defaultEnhancers from './defaultEnhancers'
 
 import createServer from '../server/createServer'
 import serverConf from '../test/serverConf'
@@ -9,7 +8,7 @@ test('http', async () => {
   const callServer = jest.fn(specs => {
     return server.query(specs)
   })
-  const proxy = createProxy({ callServer }, defaultEnhancers)
+  const proxy = createProxy({ callServer })
   const p1 = proxy.query({ templateById: { $where: 'demo/new' } })
   const p2 = proxy.query({ templateById: { $where: 'demo/new', value: 1 } })
   expect(await Promise.all([p1, p2])).toMatchObject([

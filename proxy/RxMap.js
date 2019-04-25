@@ -7,6 +7,9 @@ export default class RxMap extends Map {
     this.emitter = new EventEmitter()
   }
 
+  baseGet(key) {
+    return super.get(key)
+  }
   baseSet(key, value) {
     return super.set(key, value)
   }
@@ -18,7 +21,7 @@ export default class RxMap extends Map {
   }
 
   set(key, value) {
-    const oldValue = this.get()
+    const oldValue = this.get(key)
     if (oldValue !== value) {
       super.set(key, value)
       if (isPromise(value)) {
@@ -50,8 +53,8 @@ export default class RxMap extends Map {
     this.emitter.emit(key, value)
   }
 
-  watch(key, onNext /* , onError, onCompletion */) {
-    Promise.resolve(this.get(key)).then(onNext)
+  watch(key, onNext, option) {
+    Promise.resolve(this.get(key, option)).then(onNext)
     this.emitter.on(key, onNext)
     return () => {
       this.emitter.removeListener(key, onNext)

@@ -1,8 +1,3 @@
-import withBatch from './withBatch'
-
-const defaultEnhancers = [withBatch]
-export default defaultEnhancers
-
 export const fetchJson = (url, option = {}, fetchFunc = global.fetch) => {
   const headers = (option.headers = { Accept: 'application/json', 'Content-Type': 'application/json', ...option.headers })
   if (option.body) {
