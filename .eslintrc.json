@@ -5,8 +5,9 @@
     "jest": true,
     "node": true
   },
-  "extends": ["react-app", "plugin:lodash/canonical"],
-  "plugins": ["babel", "import", "lodash"],
+  "extends": ["airbnb", "plugin:lodash/canonical"],
+  "plugins": ["import", "lodash", "react-hooks"],
+  "parser": "babel-eslint",
   "root": true,
   "rules": {
     "arrow-body-style": 0,

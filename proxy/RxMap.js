@@ -7,57 +7,79 @@ export default class RxMap extends Map {
     this.emitter = new EventEmitter()
   }
 
-  baseGet(key) {
-    return super.get(key)
-  }
-  baseSet(key, value) {
-    return super.set(key, value)
-  }
-  baseDelete(key) {
-    return super.delete(key)
-  }
-  baseClear() {
-    return super.clear()
+  toKey(args, option) {
+    return args
   }
 
-  set(key, value) {
-    const oldValue = this.get(key)
+  watch(args, onNext, option) {
+    const key = this.toKey(args, option)
+    Promise.resolve(this.get(args, option)).then(onNext)
+    this.emitter.on(key, onNext)
+    return () => {
+      this.emitter.removeListener(key, onNext)
+    }
+  }
+
+  get(args, option) {
+    return this.baseGet(this.toKey(args, option))
+  }
+
+  set(args, value, option) {
+    const key = this.toKey(args, option)
+    const oldValue = this.baseGet(key)
     if (oldValue !== value) {
-      super.set(key, value)
+      this.baseSet(key, value)
       if (isPromise(value)) {
-        value.then(v => this.emit(key, v)).catch(err => this.emit(key, undefined, err))
+        value.then(v => this.baseEmit(key, v)).catch(err => this.baseEmit(key, undefined, err))
       } else {
-        this.emit(key, value)
+        this.baseEmit(key, value)
       }
     }
     return this
   }
 
-  delete(key) {
-    const hasDel = super.delete(key)
+  delete(args, option) {
+    const key = this.toKey(args, option)
+    const hasDel = this.baseDelete(key)
     if (hasDel) {
-      this.emit(key, undefined)
+      this.baseEmit(key, undefined)
     }
     return hasDel
   }
 
+  has(args, option) {
+    return this.baseHas(this.toKey(args, option))
+  }
+
   clear() {
-    super.clear()
+    this.baseClear()
     const { emitter } = this
     emitter.eventNames().forEach(key => {
       emitter.emit(key, undefined)
     })
   }
 
-  emit(key, value) {
+  baseEmit(key, value) {
     this.emitter.emit(key, value)
   }
 
-  watch(key, onNext, option) {
-    Promise.resolve(this.get(key, option)).then(onNext)
-    this.emitter.on(key, onNext)
-    return () => {
-      this.emitter.removeListener(key, onNext)
-    }
+  baseGet(key) {
+    return super.get(key)
+  }
+
+  baseSet(key, value) {
+    return super.set(key, value)
+  }
+
+  baseDelete(key) {
+    return super.delete(key)
+  }
+
+  baseHas(key) {
+    return super.has(key)
+  }
+
+  baseClear() {
+    return super.clear()
   }
 }
