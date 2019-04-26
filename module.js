@@ -1,8 +1,9 @@
 import { enhance } from './util'
 import { RxMapContext, RxMapProvider, useRxMap } from './react/useRxMap'
+import { createElement } from 'react'
 
 export const ProxyContext = RxMapContext
-export const ProxyProvider = RxMapProvider
+export const ProxyProvider = ({ proxy, map, children }) => createElement(RxMapProvider, { map: proxy || map, children })
 export const useProxy = useRxMap
 export { enhance }
 
