@@ -5,7 +5,12 @@
   "license": "MIT",
   "main": "index.js",
   "module": "module.js",
+  "browser": "build/module.js",
   "scripts": {
+    "clean": "del build",
+    "build": "npm run clean && babel . --out-dir build",
+    "dev": "babel . --out-dir build --watch",
+    "prepublishOnly": "npm run build && npm test",
     "test": "NODE_ENV=test jest"
   },
   "dependencies": {
@@ -15,14 +20,15 @@
     "lodash": "^4.17.11",
     "lodash-es": "4.17.11",
     "p-is-promise": "2.1.0",
+    "regenerator-runtime": "0.13.2",
     "shallow-equal": "1.1.0"
   },
   "peerDependencies": {
     "react": "^16.8.0"
   },
   "devDependencies": {
-    "@babel/core": "7.4.3",
-    "@babel/preset-env": "7.4.3",
+    "@babel/core": "7.4.4",
+    "@babel/preset-env": "7.4.4",
     "babel-eslint": "10.0.1",
     "babel-jest": "24.7.1",
     "delay": "4.2.0",
@@ -38,6 +44,7 @@
     "jest": "24.7.1",
     "react": "16.8.6"
   },
+  "sideEffects": false,
   "engines": {
     "node": ">=8"
   },

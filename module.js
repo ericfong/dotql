@@ -1,6 +1,8 @@
+import 'regenerator-runtime/runtime'
+import { createElement } from 'react'
+
 import { enhance } from './util'
 import { RxMapContext, RxMapProvider, useRxMap } from './react/useRxMap'
-import { createElement } from 'react'
 
 export const ProxyContext = RxMapContext
 export const ProxyProvider = ({ proxy, map, children }) => createElement(RxMapProvider, { map: proxy || map, children })
