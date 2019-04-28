@@ -67,7 +67,7 @@ export const withBatch = Base => class Batch extends Base {
     this.batchingPromises = []
     // console.log('batchDebounce', batchingSpecs, batchingOptions)
 
-    const results = (await super.handle({ $batch: batchingSpecs }, batchingOptions)) || []
+    const { $batch: results = [] } = (await super.handle({ $batch: batchingSpecs }, batchingOptions)) || {}
     _.forEach(batchingPromises, (p, i) => {
       p.resolve(results[i])
     })
