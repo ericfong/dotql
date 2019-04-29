@@ -65,6 +65,7 @@ export const withBatch = Base => class Batch extends Base {
 
   async batchFlushToServer() {
     const { batchingSpecs, batchingOptions, batchingPromises } = this
+    if (batchingSpecs.length === 0) return
     this.batchingSpecs = []
     this.batchingOptions = []
     this.batchingPromises = []

@@ -14,7 +14,7 @@ export default class RxMap extends Map {
     return args
   }
 
-  watch(args, onNext, option) {
+  watch(args, onNext, option = {}) {
     const key = this.toKey(args, option)
     Promise.resolve(this.get(args, option)).then(onNext)
     this.emitter.on(key, onNext)
