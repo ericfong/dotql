@@ -2,12 +2,15 @@ import EventEmitter from 'eventemitter3'
 import isPromise from 'p-is-promise'
 
 export default class RxMap extends Map {
-  constructor(iterable) {
+  constructor(iterable, conf) {
     super(iterable)
+    if (conf) {
+      Object.assign(this, conf)
+    }
     this.emitter = new EventEmitter()
   }
 
-  toKey(args, option) {
+  toKey(args) {
     return args
   }
 

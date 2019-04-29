@@ -8,8 +8,8 @@
   "browser": "build/module.js",
   "scripts": {
     "clean": "del build",
-    "build": "npm run clean && babel . --out-dir build",
-    "dev": "babel . --out-dir build --watch",
+    "build": "npm run clean && babel . --ignore 'test','**/*.test.js' --out-dir build",
+    "dev": "babel . --ignore 'test','**/*.test.js' --out-dir build --watch",
     "prepublishOnly": "npm run build && npm test",
     "test": "NODE_ENV=test jest"
   },

@@ -15,7 +15,10 @@ export const withProxy = Base => class Proxy extends Base {
   // apollo: cache-first, cache-and-network, network-only, cache-only, no-cache.   keyv: ttl || mem maxAge
 
   toKey(args, option) {
-    return _.isString(args) ? args : _.get(option, 'key', stringify(args))
+    if (_.isString(args)) return args
+    if (option && option.key) return option.key
+    const key = stringify(args)
+    return (option.key = key)
   }
 
   set(args, value, option) {
@@ -30,7 +33,7 @@ export const withProxy = Base => class Proxy extends Base {
   }
 
   // end-user-entry-point
-  get(args, option) {
+  get(args, option = {}) {
     if (super.has(args, option)) return super.get(args, option)
 
     // assert(option.callServer, 'createProxy require callServer function')
@@ -46,9 +49,9 @@ export const withProxy = Base => class Proxy extends Base {
   }
 
   // end-user-entry-point
-  watch(args, onNext, option) {
-    return super.watch(args, onNext, option)
-  }
+  // watch(args, onNext, option) {
+  //   return super.watch(args, onNext, option)
+  // }
 }
 
 export const withBatch = Base => class Batch extends Base {

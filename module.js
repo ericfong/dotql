@@ -1,4 +1,4 @@
-import 'regenerator-runtime/runtime'
+// import 'regenerator-runtime/runtime'
 import { createElement } from 'react'
 
 import { enhance } from './util'
