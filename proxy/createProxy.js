@@ -10,21 +10,20 @@ class Proxy {
     if (!this.map) this.map = new RxMap()
     this.setAts = {}
 
-    // apollo: cache-first, cache-and-network, network-only, cache-only, no-cache.   keyv: ttl || mem maxAge
-
-    this.set = (args, value, option) => {
-      const key = this.toKey(args, option)
-      this.setAts[key] = new Date()
-      return this.map.set(key, value)
-    }
-
     // middleware-point
     this.handle = (args, option) => {
       return this.callServer(args, option)
     }
 
+    // use ttl/maxAge which should similar to apollo cache-and-network
+    // network-only or no-cache for mutation
+
     // end-user-entry-point
-    this.get = (args, option = {}) => {
+    this.query = (args, option = {}) => {
+      if (option.cachePolicy === 'no-cache') {
+        return this.handle(args, option)
+      }
+
       const { map } = this
       const key = this.toKey(args, option)
       if (map.has(key)) return map.get(key)
@@ -33,20 +32,20 @@ class Proxy {
       const promise = this.handle(args, option)
 
       map.set(key, promise)
+      this.setAts[key] = new Date()
       return promise
-    }
-
-    // end-user-entry-point
-    this.query = (args, option) => {
-      return this.get(args, option)
     }
 
     // end-user-entry-point
     this.watch = (args, onNext, option = {}) => {
       const { map } = this
       const key = this.toKey(args, option)
-      Promise.resolve(this.get(args, option)).then(onNext)
+      Promise.resolve(this.query(args, option)).then(onNext)
       return map.listen(key, onNext)
+    }
+
+    this.getCache = (args, option = {}) => {
+      return this.map.get(this.toKey(args, option))
     }
   }
 

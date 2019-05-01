@@ -7,7 +7,7 @@ export const RxMapContext = createContext()
 export const RxMapProvider = ({ map, children }) => createElement(RxMapContext.Provider, { value: map, children })
 export const useRxMap = () => useContext(RxMapContext)
 
-export const useWatchPromise = (args, option) => {
+export const useWatchWithOption = (args, option) => {
   const [current, change] = useChange({ loading: true })
 
   const map = useRxMap()
@@ -24,6 +24,20 @@ export const useWatchPromise = (args, option) => {
   return current
 }
 
-export const useWatch = (...args) => useWatchPromise(args).data
+export const useWatch = (...args) => useWatchWithOption(args).data
 
 export const useOne = (...args) => _.find(useWatch(...args), (v, k) => k[0] !== '_' && k[0] !== '$')
+
+export const useMutateWithOption = () => {
+  const map = useRxMap()
+  return (args, option) => {
+    return map.query(args, { ...option, cachePolicy: 'no-cache' })
+  }
+}
+
+export const useMutate = () => {
+  const map = useRxMap()
+  return (...args) => {
+    return map.query(args, { cachePolicy: 'no-cache' })
+  }
+}
