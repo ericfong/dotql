@@ -2,29 +2,28 @@
 import _ from 'lodash'
 import stringify from 'fast-stable-stringify'
 
-import { enhance } from '../util'
 import RxMap from './RxMap'
 
-export const withProxy = Base => class Proxy extends Base {
+class Proxy {
   constructor(option = {}) {
-    super(option.map)
     Object.assign(this, option)
+    if (!this.map) this.map = new RxMap()
     this.setAts = {}
   }
 
-  // apollo: cache-first, cache-and-network, network-only, cache-only, no-cache.   keyv: ttl || mem maxAge
-
   toKey(args, option) {
-    if (_.isString(args)) return args
     if (option && option.key) return option.key
+    if (_.isString(args)) return args
     const key = stringify(args)
     return (option.key = key)
   }
 
+  // apollo: cache-first, cache-and-network, network-only, cache-only, no-cache.   keyv: ttl || mem maxAge
+
   set(args, value, option) {
     const key = this.toKey(args, option)
     this.setAts[key] = new Date()
-    return super.set(args, value, option)
+    return this.map.set(key, value)
   }
 
   // middleware-point
@@ -34,12 +33,14 @@ export const withProxy = Base => class Proxy extends Base {
 
   // end-user-entry-point
   get(args, option = {}) {
-    if (super.has(args, option)) return super.get(args, option)
+    const { map } = this
+    const key = this.toKey(args, option)
+    if (map.has(key)) return map.get(key)
 
     // assert(option.callServer, 'createProxy require callServer function')
     const promise = this.handle(args, option)
 
-    super.set(args, promise, option)
+    map.set(key, promise)
     return promise
   }
 
@@ -49,21 +50,18 @@ export const withProxy = Base => class Proxy extends Base {
   }
 
   // end-user-entry-point
-  // watch(args, onNext, option) {
-  //   return super.watch(args, onNext, option)
-  // }
+  watch(args, onNext, option = {}) {
+    const { map } = this
+    const key = this.toKey(args, option)
+    Promise.resolve(this.get(args, option)).then(onNext)
+    return map.listen(key, onNext)
+  }
 }
 
-export const withBatch = Base => class Batch extends Base {
-  constructor(option) {
-    super(option)
-    this.batchingSpecs = []
-    this.batchingOptions = []
-    this.batchingPromises = []
-    this.batchDebounce = _.debounce(proxy => proxy.batchFlushToServer())
-  }
+export const withBatch = proxy => {
+  const superHandle = proxy.handle.bind(proxy)
 
-  async batchFlushToServer() {
+  async function batchFlushToServer() {
     const { batchingSpecs, batchingOptions, batchingPromises } = this
     if (batchingSpecs.length === 0) return
     this.batchingSpecs = []
@@ -71,28 +69,53 @@ export const withBatch = Base => class Batch extends Base {
     this.batchingPromises = []
     // console.log('batchDebounce', batchingSpecs, batchingOptions)
 
-    const { $batch: results = [] } = (await super.handle({ $batch: batchingSpecs }, batchingOptions)) || {}
+    const { $batch: results = [] } = (await superHandle({ $batch: batchingSpecs }, batchingOptions)) || {}
     _.forEach(batchingPromises, (p, i) => {
       p.resolve(results[i])
     })
   }
 
-  handle(spec, option) {
-    this.batchingSpecs.push(spec)
-    this.batchingOptions.push(option)
-    const pProps = {}
-    const p = new Promise((_resolve, _reject) => {
-      pProps.resolve = _resolve
-      pProps.reject = _reject
-    })
-    Object.assign(p, pProps)
-    this.batchingPromises.push(p)
-    this.batchDebounce(this)
-    return p
+  return {
+    batchingSpecs: [],
+    batchingOptions: [],
+    batchingPromises: [],
+    batchDebounce: _.debounce(batchFlushToServer),
+
+    batchFlushToServer,
+
+    handle(spec, option) {
+      this.batchingSpecs.push(spec)
+      this.batchingOptions.push(option)
+      const pProps = {}
+      const p = new Promise((_resolve, _reject) => {
+        pProps.resolve = _resolve
+        pProps.reject = _reject
+      })
+      Object.assign(p, pProps)
+      this.batchingPromises.push(p)
+      this.batchDebounce(this)
+      return p
+    },
   }
 }
 
-export const defaultEnhancers = [withProxy, withBatch]
+export const defaultEnhancers = [withBatch]
 
-const createProxy = (option, enhancers = defaultEnhancers) => new (enhance(RxMap, enhancers))(option)
+const mixinEnhancers = (base, enhancers) => {
+  if (enhancers) {
+    const flatEnhancers = _.isArray(enhancers) ? _.flattenDeep(enhancers) : [enhancers]
+    _.forEach(flatEnhancers, enhancer => {
+      const mixins = enhancer(base)
+      if (mixins) {
+        Object.assign(base, mixins)
+      }
+    })
+  }
+}
+
+const createProxy = (option, enhancers = defaultEnhancers) => {
+  const proxy = new Proxy(option)
+  mixinEnhancers(proxy, enhancers)
+  return proxy
+}
 export default createProxy
