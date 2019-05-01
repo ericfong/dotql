@@ -5,10 +5,49 @@ import stringify from 'fast-stable-stringify'
 import RxMap from './RxMap'
 
 class Proxy {
-  constructor(option = {}) {
-    Object.assign(this, option)
+  constructor(conf = {}) {
+    Object.assign(this, conf)
     if (!this.map) this.map = new RxMap()
     this.setAts = {}
+
+    // apollo: cache-first, cache-and-network, network-only, cache-only, no-cache.   keyv: ttl || mem maxAge
+
+    this.set = (args, value, option) => {
+      const key = this.toKey(args, option)
+      this.setAts[key] = new Date()
+      return this.map.set(key, value)
+    }
+
+    // middleware-point
+    this.handle = (args, option) => {
+      return this.callServer(args, option)
+    }
+
+    // end-user-entry-point
+    this.get = (args, option = {}) => {
+      const { map } = this
+      const key = this.toKey(args, option)
+      if (map.has(key)) return map.get(key)
+
+      // assert(option.callServer, 'createProxy require callServer function')
+      const promise = this.handle(args, option)
+
+      map.set(key, promise)
+      return promise
+    }
+
+    // end-user-entry-point
+    this.query = (args, option) => {
+      return this.get(args, option)
+    }
+
+    // end-user-entry-point
+    this.watch = (args, onNext, option = {}) => {
+      const { map } = this
+      const key = this.toKey(args, option)
+      Promise.resolve(this.get(args, option)).then(onNext)
+      return map.listen(key, onNext)
+    }
   }
 
   toKey(args, option) {
@@ -17,56 +56,17 @@ class Proxy {
     const key = stringify(args)
     return (option.key = key)
   }
-
-  // apollo: cache-first, cache-and-network, network-only, cache-only, no-cache.   keyv: ttl || mem maxAge
-
-  set(args, value, option) {
-    const key = this.toKey(args, option)
-    this.setAts[key] = new Date()
-    return this.map.set(key, value)
-  }
-
-  // middleware-point
-  handle(args, option) {
-    return this.callServer(args, option)
-  }
-
-  // end-user-entry-point
-  get(args, option = {}) {
-    const { map } = this
-    const key = this.toKey(args, option)
-    if (map.has(key)) return map.get(key)
-
-    // assert(option.callServer, 'createProxy require callServer function')
-    const promise = this.handle(args, option)
-
-    map.set(key, promise)
-    return promise
-  }
-
-  // end-user-entry-point
-  query(args, option) {
-    return this.get(args, option)
-  }
-
-  // end-user-entry-point
-  watch(args, onNext, option = {}) {
-    const { map } = this
-    const key = this.toKey(args, option)
-    Promise.resolve(this.get(args, option)).then(onNext)
-    return map.listen(key, onNext)
-  }
 }
 
 export const withBatch = proxy => {
-  const superHandle = proxy.handle.bind(proxy)
+  const superHandle = proxy.handle
 
   async function batchFlushToServer() {
-    const { batchingSpecs, batchingOptions, batchingPromises } = this
+    const { batchingSpecs, batchingOptions, batchingPromises } = proxy
     if (batchingSpecs.length === 0) return
-    this.batchingSpecs = []
-    this.batchingOptions = []
-    this.batchingPromises = []
+    proxy.batchingSpecs = []
+    proxy.batchingOptions = []
+    proxy.batchingPromises = []
     // console.log('batchDebounce', batchingSpecs, batchingOptions)
 
     const { $batch: results = [] } = (await superHandle({ $batch: batchingSpecs }, batchingOptions)) || {}
@@ -75,7 +75,7 @@ export const withBatch = proxy => {
     })
   }
 
-  return {
+  Object.assign(proxy, {
     batchingSpecs: [],
     batchingOptions: [],
     batchingPromises: [],
@@ -84,19 +84,19 @@ export const withBatch = proxy => {
     batchFlushToServer,
 
     handle(spec, option) {
-      this.batchingSpecs.push(spec)
-      this.batchingOptions.push(option)
+      proxy.batchingSpecs.push(spec)
+      proxy.batchingOptions.push(option)
       const pProps = {}
       const p = new Promise((_resolve, _reject) => {
         pProps.resolve = _resolve
         pProps.reject = _reject
       })
       Object.assign(p, pProps)
-      this.batchingPromises.push(p)
-      this.batchDebounce(this)
+      proxy.batchingPromises.push(p)
+      proxy.batchDebounce(this)
       return p
     },
-  }
+  })
 }
 
 export const defaultEnhancers = [withBatch]
@@ -105,10 +105,7 @@ const mixinEnhancers = (base, enhancers) => {
   if (enhancers) {
     const flatEnhancers = _.isArray(enhancers) ? _.flattenDeep(enhancers) : [enhancers]
     _.forEach(flatEnhancers, enhancer => {
-      const mixins = enhancer(base)
-      if (mixins) {
-        Object.assign(base, mixins)
-      }
+      enhancer(base)
     })
   }
 }

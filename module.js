@@ -13,7 +13,7 @@ export { enhance }
 export { default as createServer } from './server/createServer'
 
 // proxy
-export { default as createProxy, withProxy, withBatch, defaultEnhancers } from './proxy/createProxy'
+export { default as createProxy, withBatch, defaultEnhancers } from './proxy/createProxy'
 export { fetchJson } from './proxy/util'
 
 // react
