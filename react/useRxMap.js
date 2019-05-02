@@ -26,7 +26,9 @@ export const useWatchWithOption = (args, option) => {
 
 export const useWatch = (...args) => useWatchWithOption(args).data
 
-export const useOne = (...args) => _.find(useWatch(...args), (v, k) => k[0] !== '_' && k[0] !== '$')
+const findOne = result => _.find(result, (v, k) => k[0] !== '_' && k[0] !== '$')
+
+export const useOne = (...args) => findOne(useWatch(...args))
 
 export const useMutateWithOption = () => {
   const map = useRxMap()
@@ -38,6 +40,6 @@ export const useMutateWithOption = () => {
 export const useMutate = () => {
   const map = useRxMap()
   return (...args) => {
-    return map.query(args, { cachePolicy: 'no-cache' })
+    return map.query(args, { cachePolicy: 'no-cache' }).then(result => findOne(result))
   }
 }

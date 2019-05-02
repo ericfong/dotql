@@ -6,6 +6,6 @@ module.exports = api => {
     ],
     plugins: ['lodash'],
 
-    ignore: ['build', 'node_modules', 'index.js', 'babel.config.js', 'webpack.config.js'],
+    ignore: ['node_modules', 'build', 'index.js', 'babel.config.js', 'webpack.config.js'],
   }
 }

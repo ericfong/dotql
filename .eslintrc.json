@@ -6,8 +6,7 @@
     "node": true
   },
   "extends": ["airbnb", "plugin:lodash/canonical"],
-  "plugins": ["import", "lodash", "react-hooks"],
-  "parser": "babel-eslint",
+  "plugins": ["import", "lodash"],
   "root": true,
   "rules": {
     "arrow-body-style": 0,
