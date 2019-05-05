@@ -36,23 +36,40 @@ class Proxy {
       return promise
     }
 
-    // end-user-entry-point
-    this.watch = (args, onNext, option = {}) => {
-      const { map } = this
-      const key = this.toKey(args, option)
-      Promise.resolve(this.query(args, option)).then(onNext)
-      return map.listen(key, onNext)
-    }
-
     this.getCache = (args, option = {}) => {
       return this.map.get(this.toKey(args, option))
     }
   }
 
+  // end-user-entry-point
+  watch = (args, onNext, option = {}) => {
+    const key = this.toKey(args, option)
+    Promise.resolve(this.query(args, option)).then(onNext)
+    // listen
+    const w = this.watching[key] || { count: 0 }
+    this.watching[key] = { count: w.count + 1, args, option }
+    const removeListener = this.map.listen(key, onNext)
+    return () => {
+      removeListener()
+      const count = --this.watching[key].count
+      if (count <= 0) {
+        delete this.watching[key]
+      }
+    }
+  }
+
+  watching = {}
+
+  getWatching = () => this.watching
+
+  mergeWatching = (key, values) => {
+    const watching = this.watching[key]
+    if (watching) Object.assign(watching, values)
+  }
+
   toKey(args, option) {
     if (option && option.key) return option.key
-    if (_.isString(args)) return args
-    const key = stringify(args)
+    const key = _.isString(args) ? args : stringify(args)
     return (option.key = key)
   }
 }
@@ -60,17 +77,41 @@ class Proxy {
 export const withBatch = proxy => {
   const superHandle = proxy.handle
 
-  async function batchFlushToServer() {
+  async function batchFlushToServer(pingIfEmpty) {
     const { batchingSpecs, batchingOptions, batchingPromises } = proxy
-    if (batchingSpecs.length === 0) return
+    if (batchingSpecs.length === 0 && !pingIfEmpty) return
     proxy.batchingSpecs = []
     proxy.batchingOptions = []
     proxy.batchingPromises = []
     // console.log('batchDebounce', batchingSpecs, batchingOptions)
 
-    const { $batch: results = [] } = (await superHandle({ $batch: batchingSpecs }, batchingOptions)) || {}
+    // $batch from batchingSpecs
+    const $batch = _.map(batchingSpecs, args => ({ args }))
+    const batchedKeyArr = _.map(batchingOptions, 'key')
+
+    // attach watching
+    const batchedKeyTable = _.keyBy(batchedKeyArr)
+    _.forEach(proxy.getWatching(), (w, key) => {
+      if (!batchedKeyTable[key]) {
+        $batch.push({ args: w.args, notMatch: w.eTag })
+        batchedKeyArr.push(key)
+      }
+    })
+
+    // await server call
+    const res = (await superHandle({ $batch }, batchingOptions)) || {}
+    const resBatch = res.$batch || []
+
     _.forEach(batchingPromises, (p, i) => {
-      p.resolve(results[i])
+      p.resolve(resBatch[i].result)
+    })
+
+    _.forEach(resBatch, (w, i) => {
+      // try {
+      proxy.mergeWatching(batchedKeyArr[i], { eTag: w.eTag })
+      // } catch (err) {
+      //   console.error(`index=${i} key=${batchedKeyArr[i]}`, err)
+      // }
     })
   }
 
@@ -92,7 +133,7 @@ export const withBatch = proxy => {
       })
       Object.assign(p, pProps)
       proxy.batchingPromises.push(p)
-      proxy.batchDebounce(this)
+      proxy.batchDebounce()
       return p
     },
   })

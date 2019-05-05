@@ -125,11 +125,12 @@ const serverFuncs = {
     // console.log('>> server.query', specs)
     if (specs.$batch) {
       let p = Promise.resolve([])
-      _.forEach(specs.$batch, spec => {
-        p = p.then(async results => {
-          const result = await this.get(this.queryNormalizeSpec(spec), context)
-          results.push(result)
-          return results
+      _.forEach(specs.$batch, ({ args, notMatch }) => {
+        p = p.then(async resBatch => {
+          const result = await this.get(this.queryNormalizeSpec(args), context)
+          // TODO consider notMatch return eTag
+          resBatch.push({ result, eTag: undefined })
+          return resBatch
         })
       })
       return p.then(results => ({ $batch: results }))
