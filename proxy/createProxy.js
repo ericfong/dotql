@@ -9,36 +9,51 @@ class Proxy {
     Object.assign(this, conf)
     if (!this.map) this.map = new RxMap()
     this.setAts = {}
+    this.metas = {}
+  }
 
-    // middleware-point
-    this.handle = (args, option) => {
-      return this.callServer(args, option)
+  /* #region utils  */
+  toKey(args, option) {
+    if (option && option.key) return option.key
+    const key = _.isString(args) ? args : stringify(args)
+    return (option.key = key)
+  }
+
+  getCache = (args, option = {}) => {
+    return this.map.get(this.toKey(args, option))
+  }
+
+  getMetas = () => this.metas
+
+  setMeta = (key, values) => {
+    const meta = this.metas[key]
+    if (meta) Object.assign(meta, values)
+  }
+  /* #endregion */
+
+  // middleware-point
+  handle = (args, option) => {
+    return this.callServer(args, option)
+  }
+
+  // end-user-entry-point
+  query = (args, option = {}) => {
+    if (option.cachePolicy === 'no-cache') {
+      // no-cache for mutation (or network-only)
+      return this.handle(args, option)
     }
 
-    // use ttl/maxAge which should similar to apollo cache-and-network
-    // network-only or no-cache for mutation
+    // watch or query-once (TODO use ttl/maxAge which should similar to apollo cache-and-network)
+    const { map } = this
+    const key = this.toKey(args, option)
+    if (map.has(key)) return map.get(key)
 
-    // end-user-entry-point
-    this.query = (args, option = {}) => {
-      if (option.cachePolicy === 'no-cache') {
-        return this.handle(args, option)
-      }
+    // assert(option.callServer, 'createProxy require callServer function')
+    const promise = this.handle(args, option)
 
-      const { map } = this
-      const key = this.toKey(args, option)
-      if (map.has(key)) return map.get(key)
-
-      // assert(option.callServer, 'createProxy require callServer function')
-      const promise = this.handle(args, option)
-
-      map.set(key, promise)
-      this.setAts[key] = new Date()
-      return promise
-    }
-
-    this.getCache = (args, option = {}) => {
-      return this.map.get(this.toKey(args, option))
-    }
+    map.set(key, promise)
+    this.setAts[key] = new Date()
+    return promise
   }
 
   // end-user-entry-point
@@ -46,31 +61,16 @@ class Proxy {
     const key = this.toKey(args, option)
     Promise.resolve(this.query(args, option)).then(onNext)
     // listen
-    const w = this.watching[key] || { count: 0 }
-    this.watching[key] = { count: w.count + 1, args, option }
+    const w = this.metas[key] || { count: 0 }
+    this.metas[key] = { count: w.count + 1, args, option }
     const removeListener = this.map.listen(key, onNext)
     return () => {
       removeListener()
-      const count = --this.watching[key].count
+      const count = --this.metas[key].count
       if (count <= 0) {
-        delete this.watching[key]
+        delete this.metas[key]
       }
     }
-  }
-
-  watching = {}
-
-  getWatching = () => this.watching
-
-  mergeWatching = (key, values) => {
-    const watching = this.watching[key]
-    if (watching) Object.assign(watching, values)
-  }
-
-  toKey(args, option) {
-    if (option && option.key) return option.key
-    const key = _.isString(args) ? args : stringify(args)
-    return (option.key = key)
   }
 }
 
@@ -91,7 +91,7 @@ export const withBatch = proxy => {
 
     // attach watching
     const batchedKeyTable = _.keyBy(batchedKeyArr)
-    _.forEach(proxy.getWatching(), (w, key) => {
+    _.forEach(proxy.getMetas(), (w, key) => {
       if (!batchedKeyTable[key]) {
         $batch.push({ args: w.args, notMatch: w.eTag })
         batchedKeyArr.push(key)
@@ -108,7 +108,7 @@ export const withBatch = proxy => {
 
     _.forEach(resBatch, (w, i) => {
       // try {
-      proxy.mergeWatching(batchedKeyArr[i], { eTag: w.eTag })
+      proxy.setMeta(batchedKeyArr[i], { eTag: w.eTag })
       // } catch (err) {
       //   console.error(`index=${i} key=${batchedKeyArr[i]}`, err)
       // }

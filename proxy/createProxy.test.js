@@ -10,7 +10,7 @@ test('watching', async () => {
   const proxy = createProxy({ callServer })
   const remove1 = proxy.watch('A', () => {})
   const remove2 = proxy.watch('A', () => {})
-  expect(proxy.getWatching()).toEqual({
+  expect(proxy.getMetas()).toEqual({
     A: { args: 'A', count: 2, option: { key: 'A' } },
   })
 
@@ -18,7 +18,7 @@ test('watching', async () => {
   expect(callServer).lastCalledWith({ $batch: [{ args: 'A' }] }, [{ key: 'A' }])
 
   const remove3 = proxy.watch('B', () => {})
-  expect(proxy.getWatching()).toEqual({
+  expect(proxy.getMetas()).toEqual({
     A: { args: 'A', count: 2, option: { key: 'A' }, eTag: 'A-eTag' },
     B: { args: 'B', count: 1, option: { key: 'B' } },
   })
@@ -32,7 +32,7 @@ test('watching', async () => {
   remove1()
   remove2()
   remove3()
-  expect(proxy.getWatching()).toEqual({})
+  expect(proxy.getMetas()).toEqual({})
 })
 
 test('batch', async () => {
