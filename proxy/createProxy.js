@@ -9,7 +9,12 @@ class Proxy {
     Object.assign(this, conf)
     if (!this.map) this.map = new RxMap()
     this.setAts = {}
+    // meta = key: { args, option, setAt }
+    // watchCount, eTag
+    // resolve, reject, batchIndex (del eTag)
+    // del metaKey if (watchCount === 0 || !resolve)
     this.metas = {}
+    // this.batchingKeys = []
   }
 
   /* #region utils  */
@@ -28,6 +33,13 @@ class Proxy {
   setMeta = (key, values) => {
     const meta = this.metas[key]
     if (meta) Object.assign(meta, values)
+  }
+
+  metaCheckDelete(key) {
+    const count = --this.metas[key].count
+    if (count <= 0) {
+      delete this.metas[key]
+    }
   }
   /* #endregion */
 
@@ -63,13 +75,12 @@ class Proxy {
     // listen
     const w = this.metas[key] || { count: 0 }
     this.metas[key] = { count: w.count + 1, args, option }
+
     const removeListener = this.map.listen(key, onNext)
+
     return () => {
       removeListener()
-      const count = --this.metas[key].count
-      if (count <= 0) {
-        delete this.metas[key]
-      }
+      this.metaCheckDelete(key)
     }
   }
 }
