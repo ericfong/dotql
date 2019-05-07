@@ -15,7 +15,7 @@ test('Mutations', async () => {
       },
     })
   ).toMatchObject({
-    setTemplateById: { __typename: 'Template', id: 'demo/new', value: { defaultTemplate: true } },
+    setTemplateById: { $type: 'Template', id: 'demo/new', value: { defaultTemplate: true } },
   })
 })
 
@@ -28,14 +28,14 @@ test('Queries', async () => {
       },
     })
   ).toMatchObject({
-    templateById: [{ __typename: 'Template', id: 'demo/new', value: { defaultTemplate: true } }],
+    templateById: [{ $type: 'Template', id: 'demo/new', value: { defaultTemplate: true } }],
   })
 })
 
 test('$mutate', async () => {
   expect(
     await server.resolve(
-      { __typename: 'Template', id: 'demo/new' },
+      { $type: 'Template', id: 'demo/new' },
       {
         $mutate: {
           x: 1,
@@ -52,7 +52,7 @@ test('resolve', async () => {
   expect(
     await server.resolve(
       {
-        __typename: 'Template',
+        $type: 'Template',
         id: 'demo/new',
       },
       {
@@ -66,7 +66,7 @@ test('resolve', async () => {
   expect(
     await server.resolve(
       {
-        __typename: 'Template',
+        $type: 'Template',
         id: 'demo/new2',
         json: '{"x":1}',
       },

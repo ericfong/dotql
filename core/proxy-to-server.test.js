@@ -12,8 +12,8 @@ test('http', async () => {
   const p1 = proxy.query({ templateById: { $where: 'demo/new' } })
   const p2 = proxy.query({ templateById: { $where: 'demo/new', value: 1 } })
   expect(await Promise.all([p1, p2])).toMatchObject([
-    { templateById: [{ __typename: 'Template', id: 'demo/new' }] },
-    { templateById: [{ __typename: 'Template', id: 'demo/new', value: { defaultTemplate: true } }] },
+    { templateById: [{ $type: 'Template', id: 'demo/new' }] },
+    { templateById: [{ $type: 'Template', id: 'demo/new', value: { defaultTemplate: true } }] },
   ])
   expect(callServer).toBeCalledTimes(1)
 })

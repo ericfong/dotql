@@ -16,8 +16,8 @@ const OPERATORS = {
   [MUTATE_KEY]: 1,
   [AS_KEY]: 1,
 }
-const QUERIES_TYPE = 'Queries'
-const MUTATIONS_TYPE = 'Mutations'
+export const QUERIES_TYPE = 'Queries'
+export const MUTATIONS_TYPE = 'Mutations'
 
 export default class Server {
   constructor(conf) {
@@ -33,7 +33,7 @@ export default class Server {
     const client = this
     const { schema } = client
     // console.log('>resolveRecursive>', dot, specs)
-    const typename = dot.__typename
+    const typename = dot.$type
     if (PRIMITIVE_TYPES[typename]) return dot
 
     const Type = schema[typename]
@@ -85,12 +85,12 @@ export default class Server {
             newResult = await Promise.all(
               _.map(result, item => {
                 // eslint-disable-next-line no-param-reassign
-                item.__typename = itemType
+                item.$type = itemType
                 return client.resolve(item, spec, context)
               })
             )
           } else {
-            result.__typename = field.type
+            result.$type = field.type
             newResult = await client.resolve(result, spec, context)
           }
           // eslint-disable-next-line no-param-reassign
@@ -109,8 +109,8 @@ export default class Server {
   get(spec, context = {}) {
     // console.log('>>server', spec)
     const client = this
-    const isMutation = spec.__typename === MUTATIONS_TYPE || spec[MUTATE_KEY]
-    const dot = { __typename: isMutation ? MUTATIONS_TYPE : QUERIES_TYPE }
+    const isMutation = spec.$type === MUTATIONS_TYPE || spec[MUTATE_KEY]
+    const dot = { $type: isMutation ? MUTATIONS_TYPE : QUERIES_TYPE }
     return client.resolve(dot, isMutation ? _.omit(spec, MUTATE_KEY) : spec, context)
   }
 
@@ -124,16 +124,43 @@ export default class Server {
     return args
   }
 
-  // rename to batch
+  calcArgsChannel(normArgs) {
+    return '*'
+  }
+
+  async getETag(channel) {
+    return true
+  }
+
+  // calcDotChannel(dot) {
+  //   return '*'
+  // }
+  async mutateETag(dot) {
+    // dot.$type
+    // this.setETag(this.calcDotChannel(dot), dot)
+  }
+
   query(specs, context = {}) {
     // console.log('>> server.query', specs)
     if (specs.$batch) {
       let p = Promise.resolve([])
       _.forEach(specs.$batch, ({ args, notMatch }) => {
         p = p.then(async resBatch => {
-          const result = await this.get(this.queryNormalizeSpec(args), context)
-          // TODO consider notMatch return eTag
-          resBatch.push({ result, eTag: undefined })
+          const normArgs = this.queryNormalizeSpec(args)
+          const channel = this.calcArgsChannel(normArgs)
+          let channelCurrETag
+
+          let shouldRun = !notMatch
+          if (!shouldRun) {
+            channelCurrETag = await this.getETag(channel)
+            shouldRun = channelCurrETag !== notMatch
+          }
+
+          const result = shouldRun ? await this.get(normArgs, context) : undefined
+
+          // if is-not-mutate, use channelCurrETag
+          channelCurrETag = await this.getETag(channel)
+          resBatch.push({ result, eTag: channelCurrETag })
           return resBatch
         })
       })
