@@ -107,11 +107,9 @@ export default class Server {
 
   // two main entry point for end-user
   get(spec, context = {}) {
-    // console.log('>>server', spec)
-    const client = this
     const isMutation = spec.$type === MUTATIONS_TYPE || spec[MUTATE_KEY]
     const dot = { $type: isMutation ? MUTATIONS_TYPE : QUERIES_TYPE }
-    return client.resolve(dot, isMutation ? _.omit(spec, MUTATE_KEY) : spec, context)
+    return this.resolve(dot, isMutation ? _.omit(spec, MUTATE_KEY) : spec, context)
   }
 
   // onSnapshot(args, option, onNext /* , onError, onCompletion */) {},
@@ -124,20 +122,24 @@ export default class Server {
     return args
   }
 
-  calcArgsChannel(normArgs) {
-    return '*'
-  }
-
   async getETag(channel) {
-    return true
+    return _.get(this, ['_etags', channel])
   }
 
-  // calcDotChannel(dot) {
-  //   return '*'
-  // }
+  async setETag(channel, value) {
+    return _.set(this, ['_etags', channel], value)
+  }
+
+  calcArgsChannel(normArgs) {
+    return '*' // one query will match many channels
+  }
+
+  calcDotChannel(dot) {
+    return dot.$type
+  }
+
   async mutateETag(dot) {
-    // dot.$type
-    // this.setETag(this.calcDotChannel(dot), dot)
+    return this.setETag(this.calcDotChannel(dot), new Date().toISOString())
   }
 
   query(specs, context = {}) {
