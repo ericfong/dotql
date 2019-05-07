@@ -19,11 +19,15 @@ const OPERATORS = {
 const QUERIES_TYPE = 'Queries'
 const MUTATIONS_TYPE = 'Mutations'
 
-const serverFuncs = {
+export default class Server {
+  constructor(conf) {
+    Object.assign(this, conf)
+  }
+
   resolveField(dot, spec, context, info) {
     const { field, client } = info
     return field.resolve.call(client, dot, spec[ARGUMENTS_KEY] || spec[WHERE_KEY], context, info)
-  },
+  }
 
   async resolve(dot, specs, context) {
     const client = this
@@ -97,7 +101,7 @@ const serverFuncs = {
 
     // console.log('resolveRecursive-out:', dot, specs)
     return dot
-  },
+  }
 
   // ----------------------------------------------------------------------------------------------
 
@@ -108,7 +112,7 @@ const serverFuncs = {
     const isMutation = spec.__typename === MUTATIONS_TYPE || spec[MUTATE_KEY]
     const dot = { __typename: isMutation ? MUTATIONS_TYPE : QUERIES_TYPE }
     return client.resolve(dot, isMutation ? _.omit(spec, MUTATE_KEY) : spec, context)
-  },
+  }
 
   // onSnapshot(args, option, onNext /* , onError, onCompletion */) {},
 
@@ -118,7 +122,7 @@ const serverFuncs = {
     if (_.isArray(args)) return _.head(args)
     // string = prepared query
     return args
-  },
+  }
 
   // rename to batch
   query(specs, context = {}) {
@@ -136,7 +140,7 @@ const serverFuncs = {
       return p.then(results => ({ $batch: results }))
     }
     return this.get(this.queryNormalizeSpec(specs), context)
-  },
+  }
 }
 
 /*
@@ -146,4 +150,4 @@ Call Sequence
 - resolve
 */
 
-export const createServer = (option, enhancers) => applyEnhancers({ ...option, ...serverFuncs }, enhancers)
+export const createServer = (option, enhancers) => applyEnhancers(new Server(option), enhancers)

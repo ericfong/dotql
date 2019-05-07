@@ -1,7 +1,7 @@
 export * from './util'
 
 // server
-export { default as createServer } from './createServer'
+export { default as Server, createServer } from './Server'
 
 // proxy
-export { default as Proxy } from './Proxy'
+export { default as Proxy, createProxy } from './Proxy'

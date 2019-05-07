@@ -1,6 +1,6 @@
 import { createProxy } from './Proxy'
 
-import { createServer } from './createServer'
+import { createServer } from './Server'
 import serverConf from '../test/serverConf'
 
 test('http', async () => {
