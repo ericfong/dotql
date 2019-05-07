@@ -1,3 +1,15 @@
+import _ from 'lodash'
+
+export const applyEnhancers = (target, enhancers) => {
+  if (enhancers) {
+    const flatEnhancers = _.isArray(enhancers) ? _.flattenDeep(enhancers) : [enhancers]
+    _.forEach(flatEnhancers, enhancer => {
+      enhancer(target)
+    })
+  }
+  return target
+}
+
 export const fetchJson = (url, option = {}, fetchFunc = global.fetch) => {
   const headers = (option.headers = { Accept: 'application/json', 'Content-Type': 'application/json', ...option.headers })
   if (option.body) {

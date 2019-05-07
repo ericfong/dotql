@@ -1,21 +1,5 @@
-// import 'regenerator-runtime/runtime'
-import { createElement } from 'react'
-
-import { enhance } from './util'
-import { RxMapContext, RxMapProvider, useRxMap } from './react/useRxMap'
-
-export const ProxyContext = RxMapContext
-export const ProxyProvider = ({ proxy, map, children }) => createElement(RxMapProvider, { map: proxy || map, children })
-export const useProxy = useRxMap
-export { enhance }
-
 // core
-export { default as createServer } from './server/createServer'
-
-// proxy
-export { default as createProxy, withBatch, defaultEnhancers } from './proxy/createProxy'
-export { fetchJson } from './proxy/util'
+export * from './core'
 
 // react
-export { default as useChange } from './react/useChange'
-export * from './react/useRxMap'
+export * from './react/useDotql'

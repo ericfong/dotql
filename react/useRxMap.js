@@ -1,4 +1,3 @@
-import _ from 'lodash'
 import { createContext, useContext, useEffect, createElement } from 'react'
 
 import useChange from './useChange'
@@ -25,21 +24,3 @@ export const useWatchWithOption = (args, option) => {
 }
 
 export const useWatch = (...args) => useWatchWithOption(args).data
-
-const findOne = result => _.find(result, (v, k) => k[0] !== '_' && k[0] !== '$')
-
-export const useOne = (...args) => findOne(useWatch(...args))
-
-export const useMutateWithOption = () => {
-  const map = useRxMap()
-  return (args, option) => {
-    return map.query(args, { ...option, cachePolicy: 'no-cache' })
-  }
-}
-
-export const useMutate = () => {
-  const map = useRxMap()
-  return (...args) => {
-    return map.query(args, { cachePolicy: 'no-cache' }).then(result => findOne(result))
-  }
-}

@@ -1,4 +1,4 @@
-import { enhance } from '../util'
+import { applyEnhancers } from './util'
 
 const assert = require('assert')
 const _ = require('lodash')
@@ -146,8 +146,4 @@ Call Sequence
 - resolve
 */
 
-const createServer = (option, enhancers) => {
-  const client = { ...option, ...serverFuncs }
-  return enhance(client, enhancers)
-}
-export default createServer
+export const createServer = (option, enhancers) => applyEnhancers({ ...option, ...serverFuncs }, enhancers)

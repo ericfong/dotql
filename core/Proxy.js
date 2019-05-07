@@ -3,6 +3,7 @@ import _ from 'lodash'
 import stringify from 'fast-stable-stringify'
 
 import RxMap from './RxMap'
+import { applyEnhancers } from './util'
 
 const singleAsync = (obj, key, asyncFunc) => {
   const wrappedFunc = (...args) => {
@@ -27,7 +28,7 @@ const singleAsync = (obj, key, asyncFunc) => {
   return wrappedFunc
 }
 
-class Proxy {
+export default class Proxy {
   constructor(conf) {
     Object.assign(this, conf)
     if (!this.map) this.map = new RxMap()
@@ -44,10 +45,6 @@ class Proxy {
   getCache = (args, option = {}) => {
     return this.map.get(this.toKey(args, option))
   }
-  /* #endregion */
-
-  /* #region metas  */
-  getMetas = () => this.metas
 
   setMeta = (key, values) => (this.metas[key] = Object.assign(this.metas[key] || {}, values))
 
@@ -79,9 +76,7 @@ class Proxy {
     const key = this.toKey(args, option)
     Promise.resolve(this.query(args, option)).then(onNext)
     // listen
-    const w = this.metas[key] || { watchCount: 0 }
-    this.metas[key] = { ...w, watchCount: w.watchCount + 1, args, option }
-
+    this.setMeta(key, { watchCount: _.get(this.metas, [key, 'watchCount'], 0) + 1, args, option })
     const removeListener = this.map.listen(key, onNext)
     return () => {
       removeListener()
@@ -112,7 +107,7 @@ class Proxy {
   batchFlushToServer = singleAsync(this, '_batchFlushPromise', async () => {
     const { batchingKeys } = this
     this.batchingKeys = []
-    const metas = { ...this.getMetas() }
+    const metas = { ...this.metas }
 
     const $batch = _.map(batchingKeys, key => {
       const meta = metas[key]
@@ -132,13 +127,13 @@ class Proxy {
     const res = (await this.callServer({ $batch })) || {}
     const resBatch = res.$batch || []
 
-    const curMetas = this.getMetas()
+    const curMetas = this.metas
     _.forEach(batchingKeys, (key, i) => {
       const resItem = resBatch[i]
       const meta = curMetas[key]
       if (meta.resolve) {
-        if (resItem.error) meta.resolve(resItem.error)
-        else meta.reject(resItem.result)
+        if (resItem.error) meta.reject(resItem.error)
+        else meta.resolve(resItem.result)
         delete meta.resolve
         delete meta.reject
       }
@@ -163,20 +158,4 @@ interface Meta {
 // del metaKey if (watchCount === 0 || !resolve)
 */
 
-export const defaultEnhancers = []
-
-const mixinEnhancers = (base, enhancers) => {
-  if (enhancers) {
-    const flatEnhancers = _.isArray(enhancers) ? _.flattenDeep(enhancers) : [enhancers]
-    _.forEach(flatEnhancers, enhancer => {
-      enhancer(base)
-    })
-  }
-}
-
-const createProxy = (option, enhancers = defaultEnhancers) => {
-  const proxy = new Proxy(option)
-  mixinEnhancers(proxy, enhancers)
-  return proxy
-}
-export default createProxy
+export const createProxy = (option, enhancers) => applyEnhancers(new Proxy(option), enhancers)

@@ -1,6 +1,6 @@
 // import _ from 'lodash'
 
-import createServer from './createServer'
+import { createServer } from './createServer'
 import serverConf from '../test/serverConf'
 
 const server = createServer(serverConf)
