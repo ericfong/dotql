@@ -25,13 +25,24 @@ export default class Server {
   }
 
   async resolveField(dot, spec, context, info) {
-    const { field, client } = info
+    const { field } = info
     const fieldArgs = spec[ARGUMENTS_KEY] || spec[WHERE_KEY]
-    const fieldItemType = _.isArray(field.type) ? _.head(field.type) : field.type
-    if (context.isMutation) {
+    const isArrayType = _.isArray(field.type)
+    const fieldItemType = isArrayType ? _.head(field.type) : field.type
+    const notPrimitiveType = !PRIMITIVE_TYPES[fieldItemType]
+
+    if (!context.isMutation && notPrimitiveType) {
       await this.dependETagKey(context, fieldItemType, fieldArgs)
     }
-    return field.resolve.call(client, dot, fieldArgs, context, info)
+
+    const result = field.resolve.call(this, dot, fieldArgs, context, info)
+
+    if (context.isMutation && notPrimitiveType) {
+      _.forEach(isArrayType ? result : [result], resultItem => {
+        this.mutateETag(resultItem, fieldItemType)
+      })
+    }
+    return result
   }
 
   async resolve(dot, specs, context) {
@@ -111,10 +122,10 @@ export default class Server {
 
   // ----------------------------------------------------------------------------------------------
 
-  queryNormalizeSpec(args) {
-    if (_.isArray(args)) return _.head(args)
+  queryNormalizeSpec(spec) {
+    if (_.isArray(spec)) return _.head(spec)
     // string = prepared query
-    return args
+    return spec
   }
 
   async getETag(channel) {
@@ -134,14 +145,17 @@ export default class Server {
     _.set(context, ['eTags', key], await this.getETag(key))
   }
 
-  async mutateETag(dot) {
+  async mutateETag(dot, defaultType) {
+    dot.$type = dot.$type || defaultType
     const key = this.calcETagKey(dot.$type, dot)
+    // console.log('mutateETag', dot)
     return this.setETag(key, new Date().toISOString())
   }
 
   async notMatchETags(oldETags) {
     const bools = await Promise.all(
       _.map(oldETags, async (oldETag, key) => {
+        // console.log('notMatchETags', key, oldETag, await this.getETag(key))
         return (await this.getETag(key)) !== oldETag
       })
     )
@@ -152,9 +166,9 @@ export default class Server {
     // console.log('>> server.query', specs)
     if (specs.$batch) {
       let p = Promise.resolve([])
-      _.forEach(specs.$batch, ({ args, notMatch }) => {
+      _.forEach(specs.$batch, ({ spec, notMatch }) => {
         p = p.then(async resBatch => {
-          const normArgs = this.queryNormalizeSpec(args)
+          const normArgs = this.queryNormalizeSpec(spec)
 
           let shouldRun = !notMatch
           if (!shouldRun) {

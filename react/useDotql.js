@@ -12,20 +12,19 @@ export const ProxyProvider = ({ proxy, map, children }) => createElement(RxMapPr
 export const useProxy = useRxMap
 
 // helpers and mutation
-const findOne = result => _.find(result, (v, k) => k[0] !== '_' && k[0] !== '$')
-
-export const useOne = (...args) => findOne(useWatch(...args))
-
-export const useMutateWithOption = () => {
-  const map = useRxMap()
-  return (args, option) => {
-    return map.query(args, { ...option, cachePolicy: 'no-cache' })
-  }
+const isDataField = k => k[0] !== '_' && k[0] !== '$'
+const fitOne = result => {
+  const keys = _.keys(result)
+  const headKey = _.find(keys, isDataField)
+  const lastKey = _.findLast(keys, isDataField)
+  return headKey === lastKey ? result[headKey] : result
 }
+
+export const useOne = (spec, option) => fitOne(useWatch(spec, option))
 
 export const useMutate = () => {
   const map = useRxMap()
-  return (...args) => {
-    return map.query(args, { cachePolicy: 'no-cache' }).then(result => findOne(result))
+  return (spec, option) => {
+    return map.mutate(spec, option).then(result => fitOne(result))
   }
 }

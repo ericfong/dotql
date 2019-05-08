@@ -3,7 +3,7 @@
 import { createServer } from './Server'
 import serverConf from '../test/serverConf'
 
-const server = createServer(serverConf)
+const server = createServer(serverConf())
 
 test('Mutations', async () => {
   expect(
@@ -28,7 +28,7 @@ test('Queries', async () => {
       },
     })
   ).toMatchObject({
-    templateById: [{ $type: 'Template', id: 'demo/new', value: { defaultTemplate: true } }],
+    templateById: { $type: 'Template', id: 'demo/new', value: { defaultTemplate: true } },
   })
 })
 

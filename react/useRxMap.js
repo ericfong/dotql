@@ -1,3 +1,4 @@
+import _ from 'lodash'
 import { createContext, useContext, useEffect, createElement } from 'react'
 
 import useChange from './useChange'
@@ -6,7 +7,17 @@ export const RxMapContext = createContext()
 export const RxMapProvider = ({ map, children }) => createElement(RxMapContext.Provider, { value: map, children })
 export const useRxMap = () => useContext(RxMapContext)
 
-export const useWatchWithOption = (args, option) => {
+const getMemArr = args => {
+  if (_.isArray(args)) return args
+  if (_.isPlainObject(args)) {
+    return _.keys(args)
+      .sort()
+      .map(k => args[k])
+  }
+  return [args]
+}
+
+export const useWatch = (args, option) => {
   const [current, change] = useChange({ loading: true })
 
   const map = useRxMap()
@@ -18,9 +29,7 @@ export const useWatchWithOption = (args, option) => {
       },
       option
     )
-  }, [map, ...args]) // eslint-disable-line
+  }, [map, ...getMemArr(args)]) // eslint-disable-line
 
   return current
 }
-
-export const useWatch = (...args) => useWatchWithOption(args).data

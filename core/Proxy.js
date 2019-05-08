@@ -36,14 +36,14 @@ export default class Proxy {
   }
 
   /* #region utils  */
-  toKey(args, option) {
+  toKey(spec, option) {
     if (option && option.key) return option.key
-    const key = _.isString(args) ? args : stringify(args)
+    const key = _.isString(spec) ? spec : stringify(spec)
     return (option.key = key)
   }
 
-  getCache = (args, option = {}) => {
-    return this.map.get(this.toKey(args, option))
+  getCache = (spec, option = {}) => {
+    return this.map.get(this.toKey(spec, option))
   }
 
   setMeta = (key, values) => (this.metas[key] = Object.assign(this.metas[key] || {}, values))
@@ -52,31 +52,37 @@ export default class Proxy {
   /* #endregion */
 
   // end-user-entry-point
-  query = (args, option = {}) => {
+  query = (spec, option = {}) => {
     if (option.cachePolicy === 'no-cache') {
       // no-cache for mutation (or network-only)
-      return this.handle(args, option)
+      return this.handle(spec, option)
     }
 
     // watch or query-once (TODO use ttl/maxAge which should similar to apollo cache-and-network)
     const { map } = this
-    const key = this.toKey(args, option)
+    const key = this.toKey(spec, option)
     if (map.has(key)) return map.get(key)
 
     // assert(option.callServer, 'createProxy require callServer function')
-    const promise = this.handle(args, option)
+    const promise = this.handle(spec, option)
 
     map.set(key, promise)
     this.setMeta(key, { setAt: new Date() })
     return promise
   }
 
+  mutate(spec, option = {}) {
+    spec.$type = 'Mutations'
+    option.cachePolicy = 'no-cache'
+    return this.handle(spec, option)
+  }
+
   // end-user-entry-point
-  watch = (args, onNext, option = {}) => {
-    const key = this.toKey(args, option)
-    Promise.resolve(this.query(args, option)).then(onNext)
+  watch = (spec, onNext, option = {}) => {
+    const key = this.toKey(spec, option)
+    Promise.resolve(this.query(spec, option)).then(onNext)
     // listen
-    this.setMeta(key, { watchCount: _.get(this.metas, [key, 'watchCount'], 0) + 1, args, option })
+    this.setMeta(key, { watchCount: _.get(this.metas, [key, 'watchCount'], 0) + 1, spec, option })
     const removeListener = this.map.listen(key, onNext)
     return () => {
       removeListener()
@@ -85,11 +91,11 @@ export default class Proxy {
   }
 
   // middleware-point
-  handle = (args, option) => {
-    const key = this.toKey(args, option)
+  handle = (spec, option) => {
+    const key = this.toKey(spec, option)
 
     this.batchingKeys.push(key)
-    const meta = this.setMeta(key, { args, option, eTags: null })
+    const meta = this.setMeta(key, { spec, option, eTags: null })
     this.batchDebounce()
 
     return new Promise((_resolve, _reject) => {
@@ -112,14 +118,14 @@ export default class Proxy {
     const $batch = _.map(batchingKeys, key => {
       const meta = metas[key]
       delete metas[key]
-      return { args: meta.args }
+      return { spec: meta.spec }
     })
 
     // attach rest of metas (they are watching)
     _.forEach(metas, (meta, key) => {
       if (meta.watchCount > 0) {
         batchingKeys.push(key)
-        $batch.push({ args: meta.args, notMatch: meta.eTags })
+        $batch.push({ spec: meta.spec, notMatch: meta.eTags })
       }
     })
 
@@ -145,7 +151,7 @@ export default class Proxy {
 /*
 interface Meta {
   watchCount?: number;
-  args?: object;
+  spec?: object;
   option?: object;
   eTags?: string;
 
