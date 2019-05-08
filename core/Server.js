@@ -139,8 +139,7 @@ export default class Server {
 
   async dependETagKey(context, typename, whereOrValues) {
     const key = this.calcETagKey(typename, whereOrValues)
-    const eTag = await this.getETag(key)
-    _.set(context, ['eTags', key], eTag)
+    _.set(context, ['eTags', key], await this.getETag(key))
   }
 
   async mutateETag(dot) {

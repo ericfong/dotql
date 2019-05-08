@@ -89,7 +89,7 @@ export default class Proxy {
     const key = this.toKey(args, option)
 
     this.batchingKeys.push(key)
-    const meta = this.setMeta(key, { args, option, eTag: null })
+    const meta = this.setMeta(key, { args, option, eTags: null })
     this.batchDebounce()
 
     return new Promise((_resolve, _reject) => {
@@ -119,7 +119,7 @@ export default class Proxy {
     _.forEach(metas, (meta, key) => {
       if (meta.watchCount > 0) {
         batchingKeys.push(key)
-        $batch.push({ args: meta.args, notMatch: meta.eTag })
+        $batch.push({ args: meta.args, notMatch: meta.eTags })
       }
     })
 
@@ -137,7 +137,7 @@ export default class Proxy {
         delete meta.resolve
         delete meta.reject
       }
-      meta.eTag = resItem.eTag
+      meta.eTags = resItem.eTags
     })
   })
 }
@@ -147,11 +147,11 @@ interface Meta {
   watchCount?: number;
   args?: object;
   option?: object;
-  eTag?: string;
+  eTags?: string;
 
   resolve: function;
   reject: function;
-  // no eTag if new no-cache
+  // no eTags if new no-cache
 
   setAt?: Date;
 }
