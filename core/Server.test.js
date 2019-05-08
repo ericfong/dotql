@@ -8,7 +8,7 @@ const server = createServer(serverConf)
 test('Mutations', async () => {
   expect(
     await server.query({
-      $mutate: 1,
+      $type: 'Mutations',
       setTemplateById: {
         $args: { id: 'demo/new', count: 1 },
         value: 1,
@@ -29,22 +29,6 @@ test('Queries', async () => {
     })
   ).toMatchObject({
     templateById: [{ $type: 'Template', id: 'demo/new', value: { defaultTemplate: true } }],
-  })
-})
-
-test('$mutate', async () => {
-  expect(
-    await server.resolve(
-      { $type: 'Template', id: 'demo/new' },
-      {
-        $mutate: {
-          x: 1,
-        },
-      },
-      {}
-    )
-  ).toMatchObject({
-    x: 1,
   })
 })
 

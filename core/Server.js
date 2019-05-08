@@ -6,14 +6,14 @@ const _ = require('lodash')
 // const g = _.get
 
 const PRIMITIVE_TYPES = { String: 1, Int: 1, Float: 1, Boolean: 1, Object: 1 }
+const TYPE_KEY = '$type'
 const WHERE_KEY = '$where'
 const ARGUMENTS_KEY = '$args'
-const MUTATE_KEY = '$mutate'
 const AS_KEY = '$as'
 const OPERATORS = {
+  [TYPE_KEY]: 1,
   [WHERE_KEY]: 1,
   [ARGUMENTS_KEY]: 1,
-  [MUTATE_KEY]: 1,
   [AS_KEY]: 1,
 }
 export const QUERIES_TYPE = 'Queries'
@@ -28,7 +28,9 @@ export default class Server {
     const { field, client } = info
     const fieldArgs = spec[ARGUMENTS_KEY] || spec[WHERE_KEY]
     const fieldItemType = _.isArray(field.type) ? _.head(field.type) : field.type
-    await this.dependETagKey(context, fieldItemType, fieldArgs)
+    if (context.isMutation) {
+      await this.dependETagKey(context, fieldItemType, fieldArgs)
+    }
     return field.resolve.call(client, dot, fieldArgs, context, info)
   }
 
@@ -41,15 +43,6 @@ export default class Server {
 
     const Type = schema[typename]
     assert(Type, `Type "${typename}" is missing in schema`)
-
-    // whole-dot (use field resolve instead of $mutate)
-    // mutate before resolve
-    const mutateAction = specs[MUTATE_KEY]
-    if (mutateAction) {
-      const mutateFunc = Type[MUTATE_KEY]
-      assert(mutateFunc, `"${MUTATE_KEY}" function is missing in Type "${typename}"`)
-      await mutateFunc.call(client, dot, mutateAction, context)
-    }
 
     // sub-fields
     await Promise.all(
@@ -110,12 +103,11 @@ export default class Server {
 
   // two main entry point for end-user
   get(spec, context = {}) {
-    const isMutation = spec.$type === MUTATIONS_TYPE || spec[MUTATE_KEY]
+    const isMutation = spec.$type === MUTATIONS_TYPE
     const dot = { $type: isMutation ? MUTATIONS_TYPE : QUERIES_TYPE }
-    return this.resolve(dot, isMutation ? _.omit(spec, MUTATE_KEY) : spec, context)
+    context.isMutation = isMutation
+    return this.resolve(dot, spec, context)
   }
-
-  // onSnapshot(args, option, onNext /* , onError, onCompletion */) {},
 
   // ----------------------------------------------------------------------------------------------
 
