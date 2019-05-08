@@ -24,9 +24,12 @@ export default class Server {
     Object.assign(this, conf)
   }
 
-  resolveField(dot, spec, context, info) {
+  async resolveField(dot, spec, context, info) {
     const { field, client } = info
-    return field.resolve.call(client, dot, spec[ARGUMENTS_KEY] || spec[WHERE_KEY], context, info)
+    const fieldArgs = spec[ARGUMENTS_KEY] || spec[WHERE_KEY]
+    const fieldItemType = _.isArray(field.type) ? _.head(field.type) : field.type
+    await this.dependETagKey(context, fieldItemType, fieldArgs)
+    return field.resolve.call(client, dot, fieldArgs, context, info)
   }
 
   async resolve(dot, specs, context) {
@@ -39,7 +42,7 @@ export default class Server {
     const Type = schema[typename]
     assert(Type, `Type "${typename}" is missing in schema`)
 
-    // whole-dot
+    // whole-dot (use field resolve instead of $mutate)
     // mutate before resolve
     const mutateAction = specs[MUTATE_KEY]
     if (mutateAction) {
@@ -130,16 +133,28 @@ export default class Server {
     return _.set(this, ['_etags', channel], value)
   }
 
-  calcArgsChannel(normArgs) {
-    return '*' // one query will match many channels
+  calcETagKey(typename /* , whereOrValues */) {
+    return typename
   }
 
-  calcDotChannel(dot) {
-    return dot.$type
+  async dependETagKey(context, typename, whereOrValues) {
+    const key = this.calcETagKey(typename, whereOrValues)
+    const eTag = await this.getETag(key)
+    _.set(context, ['eTags', key], eTag)
   }
 
   async mutateETag(dot) {
-    return this.setETag(this.calcDotChannel(dot), new Date().toISOString())
+    const key = this.calcETagKey(dot.$type, dot)
+    return this.setETag(key, new Date().toISOString())
+  }
+
+  async notMatchETags(oldETags) {
+    const bools = await Promise.all(
+      _.map(oldETags, async (oldETag, key) => {
+        return (await this.getETag(key)) !== oldETag
+      })
+    )
+    return _.some(bools, Boolean)
   }
 
   query(specs, context = {}) {
@@ -149,20 +164,15 @@ export default class Server {
       _.forEach(specs.$batch, ({ args, notMatch }) => {
         p = p.then(async resBatch => {
           const normArgs = this.queryNormalizeSpec(args)
-          const channel = this.calcArgsChannel(normArgs)
-          let channelCurrETag
 
           let shouldRun = !notMatch
           if (!shouldRun) {
-            channelCurrETag = await this.getETag(channel)
-            shouldRun = channelCurrETag !== notMatch
+            shouldRun = await this.notMatchETags(notMatch)
           }
 
           const result = shouldRun ? await this.get(normArgs, context) : undefined
 
-          // if is-not-mutate, use channelCurrETag
-          channelCurrETag = await this.getETag(channel)
-          resBatch.push({ result, eTag: channelCurrETag })
+          resBatch.push({ result, eTags: context.eTags })
           return resBatch
         })
       })
