@@ -46,7 +46,7 @@ test('mutate-and-eTags', async () => {
   ])
 
   // proxy2 get new count after ping
-  await proxy2.batchFlushToServer()
+  await proxy2.batchNow()
   expect(callServer2).lastCalledWith({
     $batch: [{ notMatch: { Template: undefined }, spec: { templateById: { $where: 'demo/new' } } }],
   })

@@ -28,7 +28,7 @@ const singleAsync = (obj, key, asyncFunc) => {
   return wrappedFunc
 }
 
-export default class Proxy {
+export class SimpleProxy {
   constructor(conf) {
     Object.assign(this, conf)
     if (!this.map) this.map = new RxMap()
@@ -42,17 +42,21 @@ export default class Proxy {
     return (option.key = key)
   }
 
-  getCache = (spec, option = {}) => {
+  getCache(spec, option = {}) {
     return this.map.get(this.toKey(spec, option))
   }
 
-  setMeta = (key, values) => (this.metas[key] = Object.assign(this.metas[key] || {}, values))
+  setMeta(key, values) {
+    return (this.metas[key] = Object.assign(this.metas[key] || {}, values))
+  }
 
-  updateMeta = (key, values) => Object.assign(this.metas[key], values)
+  updateMeta(key, values) {
+    return Object.assign(this.metas[key], values)
+  }
   /* #endregion */
 
   // end-user-entry-point
-  query = (spec, option = {}) => {
+  query(spec, option = {}) {
     if (option.cachePolicy === 'no-cache') {
       // no-cache for mutation (or network-only)
       return this.handle(spec, option)
@@ -78,7 +82,7 @@ export default class Proxy {
   }
 
   // end-user-entry-point
-  watch = (spec, onNext, option = {}) => {
+  watch(spec, onNext, option = {}) {
     const key = this.toKey(spec, option)
     Promise.resolve(this.query(spec, option)).then(onNext)
     // listen
@@ -90,6 +94,13 @@ export default class Proxy {
     }
   }
 
+  // middleware-point
+  handle(spec) {
+    return this.callServer(spec)
+  }
+}
+
+export default class Proxy extends SimpleProxy {
   // middleware-point
   handle = (spec, option) => {
     const key = this.toKey(spec, option)
@@ -107,10 +118,10 @@ export default class Proxy {
   batchingKeys = []
 
   batchDebounce = _.debounce(() => {
-    if (this.batchingKeys.length > 0) this.batchFlushToServer()
+    if (this.batchingKeys.length > 0) this.batchNow()
   })
 
-  batchFlushToServer = singleAsync(this, '_batchFlushPromise', async () => {
+  batchNow = singleAsync(this, '_batchFlushPromise', async () => {
     const { batchingKeys } = this
     this.batchingKeys = []
     const metas = { ...this.metas }

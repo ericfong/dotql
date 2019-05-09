@@ -4,4 +4,4 @@ export * from './util'
 export { default as Server, createServer } from './Server'
 
 // proxy
-export { default as Proxy, createProxy } from './Proxy'
+export { SimpleProxy, default as Proxy, createProxy } from './Proxy'

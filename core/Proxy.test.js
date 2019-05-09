@@ -26,7 +26,7 @@ test('watching', async () => {
   await delay()
   expect(callServer).lastCalledWith({ $batch: [{ spec: 'B' }, { spec: 'A', notMatch: { k1: 'A-eTag' } }] })
 
-  await proxy.batchFlushToServer(true)
+  await proxy.batchNow()
   expect(callServer).lastCalledWith({
     $batch: [{ spec: 'A', notMatch: { k1: 'A-eTag' } }, { spec: 'B', notMatch: { k1: 'B-eTag' } }],
   })
