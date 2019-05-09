@@ -3,15 +3,17 @@ import { applyEnhancers } from './util'
 const assert = require('assert')
 const _ = require('lodash')
 
-// const g = _.get
+const DEV = process.env.NODE_ENV !== 'production'
 
 const PRIMITIVE_TYPES = { String: 1, Int: 1, Float: 1, Boolean: 1, Object: 1 }
 const TYPE_KEY = '$type'
+const EXTEND_KEY = '$extend'
 const WHERE_KEY = '$where'
 const ARGUMENTS_KEY = '$args'
 const AS_KEY = '$as'
 const OPERATORS = {
   [TYPE_KEY]: 1,
+  [EXTEND_KEY]: 1,
   [WHERE_KEY]: 1,
   [ARGUMENTS_KEY]: 1,
   [AS_KEY]: 1,
@@ -21,6 +23,7 @@ export const MUTATIONS_TYPE = 'Mutations'
 
 export default class Server {
   constructor(conf) {
+    this.extensibles = {}
     Object.assign(this, conf)
   }
 
@@ -53,7 +56,7 @@ export default class Server {
     if (PRIMITIVE_TYPES[typename]) return dot
 
     const Type = schema[typename]
-    assert(Type, `Type "${typename}" is missing in schema`)
+    if (DEV) assert(Type, `Type "${typename}" is missing in schema`)
 
     // sub-fields
     await Promise.all(
@@ -67,7 +70,7 @@ export default class Server {
 
         if (!resolve && field in dot) return
 
-        assert(resolve, `${typename}.${fieldName} is missing resolve function`)
+        if (DEV) assert(resolve, `${typename}.${fieldName} is missing resolve function`)
 
         const resolveAs = spec[AS_KEY] || fieldName
 
@@ -112,21 +115,34 @@ export default class Server {
 
   // ----------------------------------------------------------------------------------------------
 
-  // two main entry point for end-user
-  get(spec, context = {}) {
-    const isMutation = spec.$type === MUTATIONS_TYPE
-    const dot = { $type: isMutation ? MUTATIONS_TYPE : QUERIES_TYPE }
-    context.isMutation = isMutation
-    return this.resolve(dot, spec, context)
-  }
-
-  // ----------------------------------------------------------------------------------------------
-
   queryNormalizeSpec(spec) {
-    if (_.isArray(spec)) return _.head(spec)
+    const extendName = spec[EXTEND_KEY]
+    if (extendName) {
+      const extensible = _.get(this.extensibles, [spec[TYPE_KEY], extendName])
+      if (DEV) assert(extensible, `extensibles ${spec[TYPE_KEY]}.${extendName} is missing`)
+      const extended = _.cloneDeepWith(extensible, value => {
+        if (value && value.$ref) {
+          if (DEV) assert(value.$ref in spec, `$ref ${value.$ref} is missing`)
+          return spec[value.$ref]
+        }
+      })
+      extended.$type = spec.$type
+      return extended
+    }
     // string = prepared query
     return spec
   }
+
+  // two main entry point for end-user
+  get(spec, context = {}) {
+    const isMutation = (context.isMutation = spec.$type === MUTATIONS_TYPE)
+    spec.$type = isMutation ? MUTATIONS_TYPE : QUERIES_TYPE
+    const normSpec = this.queryNormalizeSpec(spec)
+    const dot = { $type: isMutation ? MUTATIONS_TYPE : QUERIES_TYPE }
+    return this.resolve(dot, normSpec, context)
+  }
+
+  // ----------------------------------------------------------------------------------------------
 
   async getETag(channel) {
     return _.get(this, ['_etags', channel])
@@ -168,14 +184,12 @@ export default class Server {
       let p = Promise.resolve([])
       _.forEach(specs.$batch, ({ spec, notMatch }) => {
         p = p.then(async resBatch => {
-          const normArgs = this.queryNormalizeSpec(spec)
-
           let shouldRun = !notMatch
           if (!shouldRun) {
             shouldRun = await this.notMatchETags(notMatch)
           }
 
-          const result = shouldRun ? await this.get(normArgs, context) : undefined
+          const result = shouldRun ? await this.get(spec, context) : undefined
 
           resBatch.push({ result, eTags: context.eTags })
           return resBatch
@@ -183,7 +197,7 @@ export default class Server {
       })
       return p.then(results => ({ $batch: results }))
     }
-    return this.get(this.queryNormalizeSpec(specs), context)
+    return this.get(specs, context)
   }
 }
 

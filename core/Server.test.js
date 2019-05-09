@@ -5,6 +5,22 @@ import serverConf from '../test/serverConf'
 
 const server = createServer(serverConf())
 
+test('queryNormalizeSpec', async () => {
+  expect(server.queryNormalizeSpec({ $type: 'Queries', $extend: 'templateById', where: 'demo/new' })).toMatchObject({
+    $type: 'Queries',
+    templateById: { $where: 'demo/new' },
+  })
+
+  expect(await server.query({ $extend: 'templateById', where: 'demo/new' })).toMatchObject({
+    $type: 'Queries',
+    templateById: { $type: 'Template', id: 'demo/new' },
+  })
+
+  expect(
+    await server.query({ $type: 'Mutations', $extend: 'setTemplateById', args: { count: 1, id: 'demo/new' } })
+  ).toMatchObject({ setTemplateById: { $type: 'Template', id: 'demo/new' } })
+})
+
 test('Mutations', async () => {
   expect(
     await server.query({
@@ -14,9 +30,7 @@ test('Mutations', async () => {
         value: 1,
       },
     })
-  ).toMatchObject({
-    setTemplateById: { $type: 'Template', id: 'demo/new', value: { defaultTemplate: true } },
-  })
+  ).toMatchObject({ $type: 'Mutations', setTemplateById: { $type: 'Template', count: 1, id: 'demo/new' } })
 })
 
 test('Queries', async () => {
