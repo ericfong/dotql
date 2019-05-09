@@ -1,6 +1,5 @@
-/* eslint-disable */
-'use strict'
+// core
+export * from './core'
 
-// set options as a parameter, environment variable, or rc file.
-require = require('esm')(module /*, options */) // eslint-disable-line
-module.exports = require('./module')
+// react
+export * from './react/useDotql'
