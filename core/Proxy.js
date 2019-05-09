@@ -5,6 +5,8 @@ import stringify from 'fast-stable-stringify'
 import RxMap from './RxMap'
 import { applyEnhancers } from './util'
 
+const DEV = process.env.NODE_ENV !== 'production'
+
 const singleAsync = (obj, key, asyncFunc) => {
   const wrappedFunc = (...args) => {
     let p = obj[key]
@@ -98,6 +100,10 @@ export class SimpleProxy {
   handle(spec) {
     return this.callServer(spec)
   }
+
+  callServer() {
+    if (DEV) console.error('callServer function is missing')
+  }
 }
 
 export default class Proxy extends SimpleProxy {
@@ -144,6 +150,7 @@ export default class Proxy extends SimpleProxy {
     const res = (await this.callServer({ $batch })) || {}
     const resBatch = res.$batch || []
 
+    // call promises' resolves
     const curMetas = this.metas
     _.forEach(batchingKeys, (key, i) => {
       const resItem = resBatch[i]
@@ -156,7 +163,24 @@ export default class Proxy extends SimpleProxy {
       }
       meta.eTags = resItem.eTags
     })
+
+    // merge eTags
+    const newETags = _.transform(
+      this.metas,
+      (acc, meta) => {
+        _.assign(acc, meta.eTags)
+      },
+      {}
+    )
+    // diff allETags
+    const oldETags = this.eTags
+    const addETagKeys = _.omitBy(newETags, (v, k) => k in oldETags)
+    const removeETagKeys = _.omitBy(oldETags, (v, k) => k in newETags)
+    this.eTags = newETags
+    this.onEtagsChange(addETagKeys, removeETagKeys, newETags)
   })
+
+  onEtagsChange() {}
 }
 
 /*
