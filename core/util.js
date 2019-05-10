@@ -1,12 +1,17 @@
 import _ from 'lodash'
 
+// export const extend = (target, enhancers) => {
+//   if (!enhancers) return target
+//   const flatEnhancers = _.isArray(enhancers) ? _.flattenDeep(enhancers) : [enhancers]
+//   return _.reduce(flatEnhancers, (base, enhancer) => enhancer(base), target)
+// }
+
 export const applyEnhancers = (target, enhancers) => {
-  if (enhancers) {
-    const flatEnhancers = _.isArray(enhancers) ? _.flattenDeep(enhancers) : [enhancers]
-    _.forEach(flatEnhancers, enhancer => {
-      enhancer(target)
-    })
-  }
+  if (!enhancers) return target
+  const flatEnhancers = _.isArray(enhancers) ? _.flattenDeep(enhancers) : [enhancers]
+  _.forEach(flatEnhancers, enhancer => {
+    enhancer(target)
+  })
   return target
 }
 

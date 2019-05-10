@@ -47,8 +47,7 @@ export default class Server {
   }
 
   async resolve(dot, specs, context) {
-    const client = this
-    const { schema } = client
+    const { schema } = this
     // console.log('>resolveRecursive>', dot, specs)
     const typename = dot.$type
     if (PRIMITIVE_TYPES[typename]) return dot
@@ -73,12 +72,10 @@ export default class Server {
         const resolveAs = spec[AS_KEY] || fieldName
 
         // resolveField
-        const result = await client.resolveField(dot, spec, context, {
-          client,
+        const result = await this.resolveField(dot, spec, context, {
           field,
           fieldName,
           resolveAs,
-          resolveOthers: (q, _dot = dot) => client.resolve(_dot, q, context),
         })
 
         // eslint-disable-next-line no-param-reassign
@@ -94,12 +91,12 @@ export default class Server {
               _.map(result, item => {
                 // eslint-disable-next-line no-param-reassign
                 item.$type = itemType
-                return client.resolve(item, spec, context)
+                return this.resolve(item, spec, context)
               })
             )
           } else {
             result.$type = field.type
-            newResult = await client.resolve(result, spec, context)
+            newResult = await this.resolve(result, spec, context)
           }
           // eslint-disable-next-line no-param-reassign
           dot[resolveAs] = newResult
@@ -154,8 +151,8 @@ export default class Server {
     return typename
   }
 
-  async dependETagKey(context, typename, whereOrValues) {
-    const key = this.calcETagKey(typename, whereOrValues)
+  async dependETagKey(context, typename, where) {
+    const key = this.calcETagKey(typename, where)
     _.set(context, ['eTags', key], await this.getETag(key))
   }
 

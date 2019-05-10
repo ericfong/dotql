@@ -181,6 +181,12 @@ export default class Proxy extends SimpleProxy {
   })
 
   onEtagsChange() {}
+
+  receiveEtag(key, value) {
+    if (_.get(this.eTags, key) !== value) {
+      this.batchDebounce()
+    }
+  }
 }
 
 /*
