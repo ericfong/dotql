@@ -19,6 +19,21 @@ const OPERATORS = {
 export const QUERIES_TYPE = 'Queries'
 export const MUTATIONS_TYPE = 'Mutations'
 
+const prepareFieldResult = async (_result, fieldType, func) => {
+  if (!_result || PRIMITIVE_TYPES[fieldType]) return _result
+  // console.log('prepareFieldResult', _result, fieldType)
+  const isArrayType = _.isArray(fieldType)
+  const result = isArrayType ? _result : [_result]
+  const itemType = isArrayType ? _.head(fieldType) : fieldType
+  const newResult = await Promise.all(
+    _.map(result, item => {
+      item.$type = itemType
+      return func(item)
+    })
+  )
+  return isArrayType ? newResult : _.head(newResult)
+}
+
 export default class Server {
   constructor(conf) {
     this.extensibles = {}
@@ -26,7 +41,9 @@ export default class Server {
   }
 
   async resolveField(dot, spec, context, info) {
-    const { field } = info
+    const { field, fieldName } = info
+    if (!field.resolve) return dot[fieldName]
+
     const fieldArgs = spec[ARGUMENTS_KEY]
     const isArrayType = _.isArray(field.type)
     const fieldItemType = isArrayType ? _.head(field.type) : field.type
@@ -48,7 +65,6 @@ export default class Server {
 
   async resolve(dot, specs, context) {
     const { schema } = this
-    // console.log('>resolveRecursive>', dot, specs)
     const typename = dot.$type
     if (PRIMITIVE_TYPES[typename]) return dot
 
@@ -58,49 +74,21 @@ export default class Server {
     // sub-fields
     await Promise.all(
       _.map(specs, async (spec, fieldName) => {
-        // ignore operator from parent spec
-        if (OPERATORS[fieldName]) return
+        if (OPERATORS[fieldName]) return // ignore operator
 
         // get field & resolve
         const field = Type[fieldName]
-        const resolve = _.get(field, 'resolve')
-
-        if (!resolve && field in dot) return
-
-        if (DEV) assert(resolve, `${typename}.${fieldName} is missing resolve function`)
-
-        const resolveAs = spec[AS_KEY] || fieldName
+        if (DEV) assert(field, `Field ${fieldName} is missing in type ${typename}`)
 
         // resolveField
+        const resolveAs = spec[AS_KEY] || fieldName
         const result = await this.resolveField(dot, spec, context, {
           field,
           fieldName,
           resolveAs,
+          resolveOthers: (q, _dot = dot) => this.resolve(_dot, q, context),
         })
-
-        // eslint-disable-next-line no-param-reassign
-        dot[resolveAs] = result
-
-        if (_.isObject(result) && field.type !== 'Object') {
-          // console.log('resolveRecursive-item:', field.type, result)
-          let newResult
-          // interpret resolve result by field.type
-          if (_.isArray(field.type)) {
-            const itemType = _.head(field.type)
-            newResult = await Promise.all(
-              _.map(result, item => {
-                // eslint-disable-next-line no-param-reassign
-                item.$type = itemType
-                return this.resolve(item, spec, context)
-              })
-            )
-          } else {
-            result.$type = field.type
-            newResult = await this.resolve(result, spec, context)
-          }
-          // eslint-disable-next-line no-param-reassign
-          dot[resolveAs] = newResult
-        }
+        dot[resolveAs] = await prepareFieldResult(result, field.type, item => this.resolve(item, spec, context))
       })
     )
 
@@ -120,6 +108,7 @@ export default class Server {
           if (DEV) assert(value.$ref in spec, `$ref ${value.$ref} is missing`)
           return spec[value.$ref]
         }
+        return undefined
       })
       extended.$type = spec.$type
       return extended
