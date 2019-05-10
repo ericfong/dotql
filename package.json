@@ -19,14 +19,12 @@
   },
   "dependencies": {
     "core-js": "3",
-    "esm": "^3.2.22",
     "eventemitter3": "3.1.2",
     "fast-stable-stringify": "1.0.0",
     "lodash": "^4.17.11",
     "lodash-es": "4.17.11",
     "p-is-promise": "2.1.0",
-    "regenerator-runtime": "0.13.2",
-    "shallow-equal": "1.1.0"
+    "regenerator-runtime": "0.13.2"
   },
   "peerDependencies": {
     "react": "^16.8.0"

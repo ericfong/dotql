@@ -86,7 +86,9 @@ export class SimpleProxy {
   // end-user-entry-point
   watch(spec, onNext, option = {}) {
     const key = this.toKey(spec, option)
-    Promise.resolve(this.query(spec, option)).then(onNext)
+    const hitCache = this.map.has(key)
+    const p = this.query(spec, option)
+    if (hitCache) Promise.resolve(p).then(onNext)
     // listen
     this.setMeta(key, { watchCount: _.get(this.metas, [key, 'watchCount'], 0) + 1, spec, option })
     const removeListener = this.map.listen(key, onNext)
