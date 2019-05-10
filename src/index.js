@@ -5,3 +5,6 @@ export { default as Server, createServer } from './Server'
 
 // proxy
 export { SimpleProxy, default as Proxy, createProxy } from './Proxy'
+
+// react
+export * from './react/useDotql'
