@@ -8,13 +8,11 @@ const DEV = process.env.NODE_ENV !== 'production'
 const PRIMITIVE_TYPES = { String: 1, Int: 1, Float: 1, Boolean: 1, Object: 1 }
 const TYPE_KEY = '$type'
 const EXTEND_KEY = '$extend'
-const WHERE_KEY = '$where'
 const ARGUMENTS_KEY = '$args'
 const AS_KEY = '$as'
 const OPERATORS = {
   [TYPE_KEY]: 1,
   [EXTEND_KEY]: 1,
-  [WHERE_KEY]: 1,
   [ARGUMENTS_KEY]: 1,
   [AS_KEY]: 1,
 }
@@ -29,7 +27,7 @@ export default class Server {
 
   async resolveField(dot, spec, context, info) {
     const { field } = info
-    const fieldArgs = spec[ARGUMENTS_KEY] || spec[WHERE_KEY]
+    const fieldArgs = spec[ARGUMENTS_KEY]
     const isArrayType = _.isArray(field.type)
     const fieldItemType = isArrayType ? _.head(field.type) : field.type
     const notPrimitiveType = !PRIMITIVE_TYPES[fieldItemType]

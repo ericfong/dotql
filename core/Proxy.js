@@ -173,7 +173,7 @@ export default class Proxy extends SimpleProxy {
       {}
     )
     // diff allETags
-    const oldETags = this.eTags
+    const oldETags = this.eTags || {}
     const addETagKeys = _.omitBy(newETags, (v, k) => k in oldETags)
     const removeETagKeys = _.omitBy(oldETags, (v, k) => k in newETags)
     this.eTags = newETags

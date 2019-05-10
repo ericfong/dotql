@@ -46,7 +46,7 @@ export default () => {
     },
     extensibles: {
       Queries: {
-        templateById: { templateById: { $where: { $ref: 'where' } } },
+        templateById: { templateById: { $args: { $ref: 'where' } } },
       },
       Mutations: {
         setTemplateById: { setTemplateById: { $args: { $ref: 'args' } } },

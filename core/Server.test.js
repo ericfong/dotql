@@ -8,7 +8,7 @@ const server = createServer(serverConf())
 test('queryNormalizeSpec', async () => {
   expect(server.queryNormalizeSpec({ $type: 'Queries', $extend: 'templateById', where: 'demo/new' })).toMatchObject({
     $type: 'Queries',
-    templateById: { $where: 'demo/new' },
+    templateById: { $args: 'demo/new' },
   })
 
   expect(await server.query({ $extend: 'templateById', where: 'demo/new' })).toMatchObject({
@@ -37,7 +37,7 @@ test('Queries', async () => {
   expect(
     await server.query({
       templateById: {
-        $where: 'demo/new',
+        $args: 'demo/new',
         value: 1,
       },
     })

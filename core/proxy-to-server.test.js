@@ -18,8 +18,8 @@ test('mutate-and-eTags', async () => {
   const callServer2 = jest.fn(_callServer)
   const proxy2 = createProxy({ callServer: callServer2 })
 
-  proxy.watch({ templateById: { $where: 'demo/new' } }, () => {})
-  proxy2.watch({ templateById: { $where: 'demo/new' } }, () => {})
+  proxy.watch({ templateById: { $args: 'demo/new' } }, () => {})
+  proxy2.watch({ templateById: { $args: 'demo/new' } }, () => {})
   await delay(10)
   expect(serverRes.$batch[0]).toEqual({
     result: { $type: 'Queries', templateById: { id: 'demo/new', $type: 'Template' } },
@@ -31,7 +31,7 @@ test('mutate-and-eTags', async () => {
   expect(callServer).lastCalledWith({
     $batch: [
       { spec: { $type: 'Mutations', setTemplateById: { $args: { count: 1, id: 'demo/new' } } } },
-      { spec: { templateById: { $where: 'demo/new' } }, notMatch: { Template: undefined } },
+      { spec: { templateById: { $args: 'demo/new' } }, notMatch: { Template: undefined } },
     ],
   })
   expect(serverRes.$batch).toEqual([
@@ -48,7 +48,7 @@ test('mutate-and-eTags', async () => {
   // proxy2 get new count after ping
   await proxy2.batchNow()
   expect(callServer2).lastCalledWith({
-    $batch: [{ notMatch: { Template: undefined }, spec: { templateById: { $where: 'demo/new' } } }],
+    $batch: [{ notMatch: { Template: undefined }, spec: { templateById: { $args: 'demo/new' } } }],
   })
   expect(serverRes.$batch).toMatchObject([
     {
@@ -64,8 +64,8 @@ test('http', async () => {
     return server.query(specs)
   })
   const proxy = createProxy({ callServer })
-  const p1 = proxy.query({ templateById: { $where: 'demo/new' } })
-  const p2 = proxy.query({ templateById: { $where: 'demo/new', value: 1 } })
+  const p1 = proxy.query({ templateById: { $args: 'demo/new' } })
+  const p2 = proxy.query({ templateById: { $args: 'demo/new', value: 1 } })
   expect(await Promise.all([p1, p2])).toMatchObject([
     { $type: 'Queries', templateById: { $type: 'Template', id: 'demo/new' } },
     {
