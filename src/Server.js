@@ -1,4 +1,4 @@
-import { applyEnhancers } from './util'
+import { mixin } from './util'
 
 const assert = require('assert')
 const _ = require('lodash')
@@ -192,4 +192,4 @@ Call Sequence
 - resolve
 */
 
-export const createServer = (option, enhancers) => applyEnhancers(new Server(option), enhancers)
+export const createServer = (option, enhancers) => new (mixin(Server, enhancers))(option)

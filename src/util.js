@@ -1,19 +1,18 @@
 import _ from 'lodash'
 
-// export const extend = (target, enhancers) => {
+export const mixin = (target, mixins) => {
+  if (!mixins) return target
+  return _.reduce(_.isArray(mixins) ? _.flattenDeep(mixins) : [mixins], (base, mix) => mix(base), target)
+}
+
+// export const applyEnhancers = (target, enhancers) => {
 //   if (!enhancers) return target
 //   const flatEnhancers = _.isArray(enhancers) ? _.flattenDeep(enhancers) : [enhancers]
-//   return _.reduce(flatEnhancers, (base, enhancer) => enhancer(base), target)
+//   _.forEach(flatEnhancers, enhancer => {
+//     enhancer(target)
+//   })
+//   return target
 // }
-
-export const applyEnhancers = (target, enhancers) => {
-  if (!enhancers) return target
-  const flatEnhancers = _.isArray(enhancers) ? _.flattenDeep(enhancers) : [enhancers]
-  _.forEach(flatEnhancers, enhancer => {
-    enhancer(target)
-  })
-  return target
-}
 
 export const fetchJson = (url, option = {}, fetchFunc = global.fetch) => {
   const headers = (option.headers = { Accept: 'application/json', 'Content-Type': 'application/json', ...option.headers })

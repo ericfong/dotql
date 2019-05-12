@@ -3,7 +3,7 @@ import _ from 'lodash'
 import stringify from 'fast-stable-stringify'
 
 import RxMap from './RxMap'
-import { applyEnhancers } from './util'
+import { mixin } from './util'
 
 const DEV = process.env.NODE_ENV !== 'production'
 
@@ -122,7 +122,7 @@ export default class Proxy extends SimpleProxy {
   }
 
   batchCheck() {
-    if (this.batchingKeys.length > 0) this.batchNow()
+    return this.batchingKeys.length > 0 ? this.batchNow() : Promise.resolve()
   }
 
   batchNow() {
@@ -204,4 +204,4 @@ interface Meta {
 // del metaKey if (watchCount === 0 || !resolve)
 */
 
-export const createProxy = (option, enhancers) => applyEnhancers(new Proxy(option), enhancers)
+export const createProxy = (option, enhancers) => new (mixin(Proxy, enhancers))(option)
