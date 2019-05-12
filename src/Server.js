@@ -104,9 +104,14 @@ export default class Server {
       const extensible = _.get(this.extensibles, [spec[TYPE_KEY], extendName])
       if (DEV) assert(extensible, `extensibles ${spec[TYPE_KEY]}.${extendName} is missing`)
       const extended = _.cloneDeepWith(extensible, value => {
-        if (value && value.$ref) {
-          if (DEV) assert(value.$ref in spec, `$ref ${value.$ref} is missing`)
-          return spec[value.$ref]
+        if (value) {
+          if (value.$ref) {
+            if (DEV) assert(value.$ref in spec, `$ref ${value.$ref} is missing`)
+            return spec[value.$ref]
+          }
+          if (value.$refs) {
+            return _.pick(spec, value.$refs)
+          }
         }
         return undefined
       })
