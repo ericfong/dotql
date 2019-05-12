@@ -21,20 +21,18 @@ test('mutate-and-eTags', async () => {
   proxy.watch({ templateById: { $args: 'demo/new' } }, () => {})
   proxy2.watch({ templateById: { $args: 'demo/new' } }, () => {})
   await delay(10)
-  expect(serverRes.$batch[0]).toEqual({
+  expect(serverRes[0]).toEqual({
     result: { $type: 'Queries', templateById: { id: 'demo/new', $type: 'Template' } },
     eTags: { Template: undefined },
   })
 
   await proxy.mutate({ setTemplateById: { $args: { id: 'demo/new', count: 1 } } })
 
-  expect(callServer).lastCalledWith({
-    $batch: [
-      { spec: { $type: 'Mutations', setTemplateById: { $args: { count: 1, id: 'demo/new' } } } },
-      { spec: { templateById: { $args: 'demo/new' } }, notMatch: { Template: undefined } },
-    ],
-  })
-  expect(serverRes.$batch).toEqual([
+  expect(callServer).lastCalledWith([
+    { spec: { $type: 'Mutations', setTemplateById: { $args: { count: 1, id: 'demo/new' } } } },
+    { spec: { templateById: { $args: 'demo/new' } }, notMatch: { Template: undefined } },
+  ])
+  expect(serverRes).toEqual([
     {
       result: { $type: 'Mutations', setTemplateById: { id: 'demo/new', count: 1, $type: 'Template' } },
       eTags: undefined,
@@ -47,10 +45,8 @@ test('mutate-and-eTags', async () => {
 
   // proxy2 get new count after ping
   await proxy2.batchNow()
-  expect(callServer2).lastCalledWith({
-    $batch: [{ notMatch: { Template: undefined }, spec: { templateById: { $args: 'demo/new' } } }],
-  })
-  expect(serverRes.$batch).toMatchObject([
+  expect(callServer2).lastCalledWith([{ notMatch: { Template: undefined }, spec: { templateById: { $args: 'demo/new' } } }])
+  expect(serverRes).toMatchObject([
     {
       eTags: { Template: expect.any(String) },
       result: { $type: 'Queries', templateById: { $type: 'Template', count: 1, id: 'demo/new' } },

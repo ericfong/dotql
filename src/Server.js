@@ -164,9 +164,9 @@ export default class Server {
 
   query(specs, context = {}) {
     // console.log('>> server.query', specs)
-    if (specs.$batch) {
+    if (Array.isArray(specs)) {
       let p = Promise.resolve([])
-      _.forEach(specs.$batch, ({ spec, notMatch }) => {
+      _.forEach(specs, ({ spec, notMatch }) => {
         p = p.then(async resBatch => {
           let shouldRun = !notMatch
           if (!shouldRun) {
@@ -179,7 +179,7 @@ export default class Server {
           return resBatch
         })
       })
-      return p.then(results => ({ $batch: results }))
+      return p
     }
     return this.get(specs, context)
   }

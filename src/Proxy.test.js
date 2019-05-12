@@ -5,7 +5,7 @@ import { createProxy } from './Proxy'
 
 test('watching', async () => {
   const callServer = jest.fn(req => {
-    return { $batch: req.$batch.map(w => ({ result: w.spec, eTags: { k1: `${w.spec}-eTag` } })) }
+    return req.map(w => ({ result: w.spec, eTags: { k1: `${w.spec}-eTag` } }))
   })
   const proxy = createProxy({ callServer })
   const remove1 = proxy.watch('A', () => {})
@@ -15,7 +15,7 @@ test('watching', async () => {
   })
 
   await delay()
-  expect(callServer).lastCalledWith({ $batch: [{ spec: 'A' }] })
+  expect(callServer).lastCalledWith([{ spec: 'A' }])
 
   const remove3 = proxy.watch('B', () => {})
   expect(proxy.metas).toMatchObject({
@@ -24,12 +24,10 @@ test('watching', async () => {
   })
 
   await delay()
-  expect(callServer).lastCalledWith({ $batch: [{ spec: 'B' }, { spec: 'A', notMatch: { k1: 'A-eTag' } }] })
+  expect(callServer).lastCalledWith([{ spec: 'B' }, { spec: 'A', notMatch: { k1: 'A-eTag' } }])
 
   await proxy.batchNow()
-  expect(callServer).lastCalledWith({
-    $batch: [{ spec: 'A', notMatch: { k1: 'A-eTag' } }, { spec: 'B', notMatch: { k1: 'B-eTag' } }],
-  })
+  expect(callServer).lastCalledWith([{ spec: 'A', notMatch: { k1: 'A-eTag' } }, { spec: 'B', notMatch: { k1: 'B-eTag' } }])
 
   remove1()
   remove2()
@@ -42,12 +40,12 @@ test('watching', async () => {
 
 test('batch', async () => {
   const callServer = jest.fn(req => {
-    return { $batch: req.$batch.map(s => ({ result: s.spec.toLowerCase() })) }
+    return req.map(s => ({ result: s.spec.toLowerCase() }))
   })
   const proxy = createProxy({ callServer })
   const p1 = proxy.query('A')
   const p2 = proxy.query('B')
   expect(await Promise.all([p1, p2])).toEqual(['a', 'b'])
   expect(callServer).toBeCalledTimes(1)
-  expect(callServer).lastCalledWith({ $batch: [{ spec: 'A' }, { spec: 'B' }] })
+  expect(callServer).lastCalledWith([{ spec: 'A' }, { spec: 'B' }])
 })

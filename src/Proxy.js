@@ -8,26 +8,20 @@ import { applyEnhancers } from './util'
 const DEV = process.env.NODE_ENV !== 'production'
 
 const singleAsync = (obj, key, asyncFunc) => {
-  const wrappedFunc = (...args) => {
-    let p = obj[key]
-    if (p) {
-      if (p.hasNext) {
-        return p
-      }
-      p.hasNext = true
-      return p.then(() => {
-        return wrappedFunc(...args)
-      })
-    }
+  const doFunc = () => (obj[key] = asyncFunc().finally(() => {
+    obj[key] = null
+  }))
 
-    p = asyncFunc(...args)
-    obj[key] = p
-    p.finally(() => {
-      obj[key] = null
-    })
-    return p
+  const p = obj[key]
+  if (p) {
+    if (p.hasNext) {
+      return p
+    }
+    p.hasNext = true
+    return p.then(doFunc)
   }
-  return wrappedFunc
+
+  return doFunc()
 }
 
 export class SimpleProxy {
@@ -109,8 +103,12 @@ export class SimpleProxy {
 }
 
 export default class Proxy extends SimpleProxy {
+  batchingKeys = []
+
+  batchDebounce = _.debounce(() => this.batchCheck())
+
   // middleware-point
-  handle = (spec, option) => {
+  handle(spec, option) {
     const key = this.toKey(spec, option)
 
     this.batchingKeys.push(key)
@@ -123,64 +121,63 @@ export default class Proxy extends SimpleProxy {
     })
   }
 
-  batchingKeys = []
-
-  batchDebounce = _.debounce(() => {
+  batchCheck() {
     if (this.batchingKeys.length > 0) this.batchNow()
-  })
+  }
 
-  batchNow = singleAsync(this, '_batchFlushPromise', async () => {
-    const { batchingKeys } = this
-    this.batchingKeys = []
-    const metas = { ...this.metas }
+  batchNow() {
+    return singleAsync(this, '_batchFlushPromise', async () => {
+      const { batchingKeys } = this
+      this.batchingKeys = []
+      const metas = { ...this.metas }
 
-    const $batch = _.map(batchingKeys, key => {
-      const meta = metas[key]
-      delete metas[key]
-      return { spec: meta.spec }
+      const batchArr = _.map(batchingKeys, key => {
+        const meta = metas[key]
+        delete metas[key]
+        return { spec: meta.spec }
+      })
+
+      // attach rest of metas (they are watching)
+      _.forEach(metas, (meta, key) => {
+        if (meta.watchCount > 0) {
+          batchingKeys.push(key)
+          batchArr.push({ spec: meta.spec, notMatch: meta.eTags })
+        }
+      })
+
+      // await server call
+      const resBatch = (await this.callServer(batchArr)) || []
+
+      // call promises' resolves
+      const curMetas = this.metas
+      _.forEach(batchingKeys, (key, i) => {
+        const resItem = resBatch[i]
+        const meta = curMetas[key]
+        if (meta.resolve) {
+          if (resItem.error) meta.reject(resItem.error)
+          else meta.resolve(resItem.result)
+          delete meta.resolve
+          delete meta.reject
+        }
+        meta.eTags = resItem.eTags
+      })
+
+      // merge eTags
+      const newETags = _.transform(
+        this.metas,
+        (acc, meta) => {
+          _.assign(acc, meta.eTags)
+        },
+        {}
+      )
+      // diff allETags
+      const oldETags = this.eTags || {}
+      const addETagKeys = _.omitBy(newETags, (v, k) => k in oldETags)
+      const removeETagKeys = _.omitBy(oldETags, (v, k) => k in newETags)
+      this.eTags = newETags
+      this.onEtagsChange(addETagKeys, removeETagKeys, newETags)
     })
-
-    // attach rest of metas (they are watching)
-    _.forEach(metas, (meta, key) => {
-      if (meta.watchCount > 0) {
-        batchingKeys.push(key)
-        $batch.push({ spec: meta.spec, notMatch: meta.eTags })
-      }
-    })
-
-    // await server call
-    const res = (await this.callServer({ $batch })) || {}
-    const resBatch = res.$batch || []
-
-    // call promises' resolves
-    const curMetas = this.metas
-    _.forEach(batchingKeys, (key, i) => {
-      const resItem = resBatch[i]
-      const meta = curMetas[key]
-      if (meta.resolve) {
-        if (resItem.error) meta.reject(resItem.error)
-        else meta.resolve(resItem.result)
-        delete meta.resolve
-        delete meta.reject
-      }
-      meta.eTags = resItem.eTags
-    })
-
-    // merge eTags
-    const newETags = _.transform(
-      this.metas,
-      (acc, meta) => {
-        _.assign(acc, meta.eTags)
-      },
-      {}
-    )
-    // diff allETags
-    const oldETags = this.eTags || {}
-    const addETagKeys = _.omitBy(newETags, (v, k) => k in oldETags)
-    const removeETagKeys = _.omitBy(oldETags, (v, k) => k in newETags)
-    this.eTags = newETags
-    this.onEtagsChange(addETagKeys, removeETagKeys, newETags)
-  })
+  }
 
   onEtagsChange() {}
 

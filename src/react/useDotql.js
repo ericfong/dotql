@@ -3,7 +3,6 @@ import { createElement } from 'react'
 
 import { RxMapContext, RxMapProvider, useRxMap, useWatch } from './useRxMap'
 
-export { default as useChange } from './useChange'
 export * from './useRxMap'
 
 // rename useRxMap
