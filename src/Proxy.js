@@ -149,22 +149,26 @@ export default class Proxy extends SimpleProxy {
       const resBatch = (await this.callServer(batchArr)) || []
 
       // call promises' resolves
-      const curMetas = this.metas
+      const thisMetas = this.metas
       _.forEach(batchingKeys, (key, i) => {
         const resItem = resBatch[i]
-        const meta = curMetas[key]
+        const meta = thisMetas[key]
         if (meta.resolve) {
           if (resItem.error) meta.reject(resItem.error)
           else meta.resolve(resItem.result)
           delete meta.resolve
           delete meta.reject
         }
-        meta.eTags = resItem.eTags
+        // record eTags
+        if (resItem.eTags !== undefined) {
+          // return eTags = undefined means no change
+          meta.eTags = resItem.eTags
+        }
       })
 
       // merge eTags
       const newETags = _.transform(
-        this.metas,
+        thisMetas,
         (acc, meta) => {
           _.assign(acc, meta.eTags)
         },

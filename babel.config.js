@@ -13,7 +13,7 @@ module.exports = api => {
         },
       ],
     ],
-    plugins: ['@babel/plugin-proposal-class-properties', 'lodash'],
+    plugins: ['@babel/plugin-proposal-class-properties', '@babel/plugin-proposal-optional-chaining', 'lodash'],
 
     ignore: ['node_modules', 'build', 'babel.config.js'],
   }

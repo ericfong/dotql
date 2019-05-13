@@ -123,12 +123,24 @@ export default class Server {
   }
 
   // two main entry point for end-user
-  get(spec, context = {}) {
+  async get(_body, context = {}) {
+    const hasHeader = _body?.spec
+    // context.eTags is filled by this.resolve
+    const returnResult = result => (hasHeader ? { result, eTags: context.eTags } : result)
+    const { spec, notMatch } = hasHeader ? _body : { spec: _body }
+
+    const shouldRun = await this.notMatchETags(notMatch)
+    if (!shouldRun) {
+      // return eTags = undefined means no change
+      return returnResult(undefined)
+    }
+
     const isMutation = (context.isMutation = spec.$type === MUTATIONS_TYPE)
     spec.$type = isMutation ? MUTATIONS_TYPE : QUERIES_TYPE
     const normSpec = this.queryNormalizeSpec(spec)
     const dot = { $type: isMutation ? MUTATIONS_TYPE : QUERIES_TYPE }
-    return this.resolve(dot, normSpec, context)
+    const result = await this.resolve(dot, normSpec, context)
+    return returnResult(result)
   }
 
   // ----------------------------------------------------------------------------------------------
@@ -158,6 +170,7 @@ export default class Server {
   }
 
   async notMatchETags(oldETags) {
+    if (!oldETags) return true
     const bools = await Promise.all(
       _.map(oldETags, async (oldETag, key) => {
         // console.log('notMatchETags', key, oldETag, await this.getETag(key))
@@ -167,26 +180,18 @@ export default class Server {
     return _.some(bools, Boolean)
   }
 
-  query(specs, context = {}) {
-    // console.log('>> server.query', specs)
-    if (Array.isArray(specs)) {
+  query(body, context = {}) {
+    if (Array.isArray(body)) {
       let p = Promise.resolve([])
-      _.forEach(specs, ({ spec, notMatch }) => {
+      _.forEach(body, eachBody => {
         p = p.then(async resBatch => {
-          let shouldRun = !notMatch
-          if (!shouldRun) {
-            shouldRun = await this.notMatchETags(notMatch)
-          }
-
-          const result = shouldRun ? await this.get(spec, context) : undefined
-
-          resBatch.push({ result, eTags: context.eTags })
+          resBatch.push(await this.get(eachBody, context))
           return resBatch
         })
       })
       return p
     }
-    return this.get(specs, context)
+    return this.get(body, context)
   }
 }
 
