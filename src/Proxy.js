@@ -110,15 +110,9 @@ export default class Proxy extends SimpleProxy {
   // middleware-point
   handle(spec, option) {
     const key = this.toKey(spec, option)
-
     this.batchingKeys.push(key)
-    const meta = this.setMeta(key, { spec, option, eTags: null })
     this.batchDebounce()
-
-    return new Promise((_resolve, _reject) => {
-      meta.resolve = _resolve
-      meta.reject = _reject
-    })
+    return this.batchCreatePromise(spec, option, key)
   }
 
   batchCheck() {
@@ -151,19 +145,7 @@ export default class Proxy extends SimpleProxy {
       // call promises' resolves
       const thisMetas = this.metas
       _.forEach(batchingKeys, (key, i) => {
-        const resItem = resBatch[i]
-        const meta = thisMetas[key]
-        if (meta.resolve) {
-          if (resItem.error) meta.reject(resItem.error)
-          else meta.resolve(resItem.result)
-          delete meta.resolve
-          delete meta.reject
-        }
-        // record eTags
-        if (resItem.eTags !== undefined) {
-          // return eTags = undefined means no change
-          meta.eTags = resItem.eTags
-        }
+        this.batchAccept(key, resBatch[i])
       })
 
       // merge eTags
@@ -181,6 +163,30 @@ export default class Proxy extends SimpleProxy {
       this.eTags = newETags
       this.onEtagsChange(addETagKeys, removeETagKeys, newETags)
     })
+  }
+
+  batchCreatePromise(spec, option, key) {
+    const meta = this.setMeta(key, { spec, option, eTags: null })
+    return new Promise((_resolve, _reject) => {
+      meta.resolve = _resolve
+      meta.reject = _reject
+    })
+  }
+
+  batchAccept(key, resItem) {
+    const meta = this.metas[key] || {}
+    if (meta.resolve) {
+      if (resItem.error) meta.reject(resItem.error)
+      else meta.resolve(resItem.result)
+      delete meta.resolve
+      delete meta.reject
+    }
+    // record eTags
+    if (resItem.eTags !== undefined) {
+      // return eTags = undefined means no change
+      meta.eTags = resItem.eTags
+      this.metas[key] = meta
+    }
   }
 
   onEtagsChange() {}
