@@ -171,6 +171,7 @@ export default class Server {
 
   async notMatchETags(oldETags) {
     if (!oldETags) return true
+    // TODO how to handle oldETags === {}
     const bools = await Promise.all(
       _.map(oldETags, async (oldETag, key) => {
         // console.log('notMatchETags', key, oldETag, await this.getETag(key))

@@ -38,8 +38,13 @@ export class SimpleProxy {
     return (option.key = key)
   }
 
-  getCache(spec, option = {}) {
-    return this.map.get(this.toKey(spec, option))
+  // getCache(spec, option = {}) {
+  //   return this.map.get(this.toKey(spec, option))
+  // }
+
+  setCache(key, promise) {
+    this.map.set(key, promise)
+    this.setMeta(key, { setAt: new Date() })
   }
 
   setMeta(key, values) {
@@ -65,9 +70,7 @@ export class SimpleProxy {
 
     // assert(option.callServer, 'createProxy require callServer function')
     const promise = this.handle(spec, option)
-
-    map.set(key, promise)
-    this.setMeta(key, { setAt: new Date() })
+    this.setCache(key, promise)
     return promise
   }
 
@@ -173,18 +176,22 @@ export default class Proxy extends SimpleProxy {
     })
   }
 
-  batchAccept(key, resItem) {
+  batchAccept(key, res) {
     const meta = this.metas[key] || {}
     if (meta.resolve) {
-      if (resItem.error) meta.reject(resItem.error)
-      else meta.resolve(resItem.result)
+      if (res.error) meta.reject(res.error)
+      else meta.resolve(res.result)
       delete meta.resolve
       delete meta.reject
+    } else {
+      // no meta.resolve means no direct query(), it is from watching
+      const p = res.error ? Promise.reject(res.error) : Promise.resolve(res.result)
+      this.setCache(key, p)
     }
     // record eTags
-    if (resItem.eTags !== undefined) {
+    if (res.eTags !== undefined) {
       // return eTags = undefined means no change
-      meta.eTags = resItem.eTags
+      meta.eTags = res.eTags
       this.metas[key] = meta
     }
   }
