@@ -9,16 +9,16 @@ graphql like but query by plain json. No more DSL or AST parsing
 ![npm](https://img.shields.io/npm/l/dotql.svg?style=flat-square)
 ![npm](https://img.shields.io/github/languages/code-size/ericfong/dotql.svg?style=flat-square)
 
-Want to have a graphql like client and server structure but less overhead on parsing, with easy to wrap around interface.
+A graphql like client and server without graphql DSL, faster parsing, and easy to customize interface.
 
-Default way to calculate and notify client to refresh their watching queries is comming soon.
+Built-in implementation for live-query (by ping or/and push)
 
 ### List of features
 
-- strictly follow graphql but in json, no more parsing
+- strictly follow graphql but in json, no more DSL parsing
 - small in size, all-in-one instead of few heavy weighted packages
-- default way to calculate and notify client to refresh their watching queries is comming soon.
-- hackable interface
+- built-in implementation for live-query (by ping or/and push)
+- customizable interface
 
 ### Code Demo
 
