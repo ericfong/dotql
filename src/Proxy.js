@@ -25,6 +25,8 @@ const singleAsync = (obj, key, asyncFunc) => {
 }
 
 export class SimpleProxy {
+  // conf props: callServer, maxAge
+
   constructor(conf) {
     Object.assign(this, conf)
     if (!this.map) this.map = new RxMap()
@@ -38,13 +40,10 @@ export class SimpleProxy {
     return (option.key = key)
   }
 
-  // getCache(spec, option = {}) {
-  //   return this.map.get(this.toKey(spec, option))
-  // }
-
-  setCache(key, promise) {
+  setCache(key, promise, option) {
     this.map.set(key, promise)
-    this.setMeta(key, { setAt: new Date() })
+    const maxAge = option.maxAge || this.maxAge
+    this.setMeta(key, { expires: typeof maxAge === 'number' ? Date.now() + maxAge : undefined })
   }
 
   setMeta(key, values) {
@@ -53,6 +52,16 @@ export class SimpleProxy {
 
   updateMeta(key, values) {
     return Object.assign(this.metas[key], values)
+  }
+
+  delete(key) {
+    this.map.delete(key)
+    delete this.metas[key]
+  }
+
+  clear() {
+    this.map.clear()
+    this.metas = {}
   }
   /* #endregion */
 
@@ -63,15 +72,25 @@ export class SimpleProxy {
       return this.handle(spec, option)
     }
 
-    // watch or query-once (TODO use ttl/maxAge which should similar to apollo cache-and-network)
     const { map } = this
     const key = this.toKey(spec, option)
-    if (map.has(key)) return map.get(key)
 
-    // assert(option.callServer, 'createProxy require callServer function')
-    const promise = this.handle(spec, option)
-    this.setCache(key, promise)
-    return promise
+    // hit cache
+    let oldCache
+    if (map.has(key)) {
+      oldCache = map.get(key)
+      const expires = _.get(this.metas, [key, 'expires'])
+      if (typeof expires === 'number' && Date.now() > expires) {
+        this.delete(key)
+        // delete cache, refetch and return oldCache
+      } else {
+        return oldCache
+      }
+    }
+
+    const newPromise = this.handle(spec, option)
+    this.setCache(key, newPromise, option)
+    return oldCache || newPromise
   }
 
   mutate(spec, option = {}) {
@@ -186,7 +205,7 @@ export default class Proxy extends SimpleProxy {
     } else {
       // no meta.resolve means no direct query(), it is from watching
       const p = res.error ? Promise.reject(res.error) : Promise.resolve(res.result)
-      this.setCache(key, p)
+      this.setCache(key, p, meta.option)
     }
     // record eTags
     if (res.eTags !== undefined) {
@@ -216,7 +235,7 @@ interface Meta {
   reject: function;
   // no eTags if new no-cache
 
-  setAt?: Date;
+  expires?: Date;
 }
 // del metaKey if (watchCount === 0 || !resolve)
 */
