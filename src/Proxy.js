@@ -170,7 +170,7 @@ export default class Proxy extends SimpleProxy {
         this.batchAccept(key, resBatch[i])
       })
 
-      // merge eTags
+      // onEtagsChange, merge eTags
       const newETags = _.transform(
         thisMetas,
         (acc, meta) => {
@@ -178,12 +178,7 @@ export default class Proxy extends SimpleProxy {
         },
         {}
       )
-      // diff allETags
-      const oldETags = this.eTags || {}
-      const addETagKeys = _.omitBy(newETags, (v, k) => k in oldETags)
-      const removeETagKeys = _.omitBy(oldETags, (v, k) => k in newETags)
-      this.eTags = newETags
-      this.onEtagsChange(addETagKeys, removeETagKeys, newETags)
+      this.eTags = this.onEtagsChange(newETags, this.eTags || {}) || newETags
     })
   }
 
@@ -216,12 +211,6 @@ export default class Proxy extends SimpleProxy {
   }
 
   onEtagsChange() {}
-
-  receiveEtag(key, value) {
-    if (_.get(this.eTags, key) !== value) {
-      this.batchDebounce()
-    }
-  }
 }
 
 /*
