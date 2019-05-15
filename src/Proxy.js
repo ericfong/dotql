@@ -125,12 +125,23 @@ export class SimpleProxy {
 }
 
 export default class Proxy extends SimpleProxy {
-  batchingKeys = []
+  // conf props: customHandle, channelsDidChange
 
-  batchDebounce = _.debounce(() => this.batchCheck())
+  constructor(conf) {
+    super(conf)
+    this.batchingKeys = []
+    this.batchDebounce = _.debounce(() => this.batchCheck())
+    if (this.channelsDidChange) {
+      this.emitChannelsDidChangeDebounce = _.debounce(() => this.emitChannelsDidChange())
+    }
+  }
 
   // middleware-point
   handle(spec, option) {
+    if (this.customHandle) {
+      const handled = this.customHandle(spec, option)
+      if (handled !== undefined) return handled
+    }
     const key = this.toKey(spec, option)
     this.batchingKeys.push(key)
     this.batchDebounce()
@@ -165,20 +176,9 @@ export default class Proxy extends SimpleProxy {
       const resBatch = (await this.callServer(batchArr)) || []
 
       // call promises' resolves
-      const thisMetas = this.metas
       _.forEach(batchingKeys, (key, i) => {
         this.batchAccept(key, resBatch[i])
       })
-
-      // onEtagsChange, merge eTags
-      const newETags = _.transform(
-        thisMetas,
-        (acc, meta) => {
-          _.assign(acc, meta.eTags)
-        },
-        {}
-      )
-      this.eTags = this.onEtagsChange(newETags, this.eTags || {}) || newETags
     })
   }
 
@@ -207,10 +207,23 @@ export default class Proxy extends SimpleProxy {
       // return eTags = undefined means no change
       meta.eTags = res.eTags
       this.metas[key] = meta
+
+      if (this.channelsDidChange) this.emitChannelsDidChangeDebounce()
     }
   }
 
-  onEtagsChange() {}
+  emitChannelsDidChange() {
+    if (this.channelsDidChange) {
+      const newETags = _.transform(
+        this.metas,
+        (acc, meta) => {
+          _.assign(acc, meta.eTags)
+        },
+        {}
+      )
+      this.eTags = this.channelsDidChange(newETags, this.eTags || {}) || newETags
+    }
+  }
 }
 
 /*

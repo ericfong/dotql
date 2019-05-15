@@ -35,6 +35,8 @@ const prepareFieldResult = async (_result, fieldType, func) => {
 }
 
 export default class Server {
+  // conf props: getETag, setETag, calcQueryChannel, calcDotChannel
+
   constructor(conf) {
     this.extensibles = {}
     Object.assign(this, conf)
@@ -56,9 +58,11 @@ export default class Server {
     const result = field.resolve.call(this, dot, fieldArgs, context, info)
 
     if (context.isMutation && notPrimitiveType) {
-      _.forEach(isArrayType ? result : [result], resultItem => {
-        this.mutateETag(resultItem, fieldItemType)
-      })
+      await Promise.all(
+        _.map(isArrayType ? result : [result], resultItem => {
+          return this.mutateETag(resultItem, fieldItemType)
+        })
+      )
     }
     return result
   }
@@ -145,27 +149,30 @@ export default class Server {
 
   // ----------------------------------------------------------------------------------------------
 
-  async getETag(channel) {
-    return _.get(this, ['_etags', channel])
+  getETag(channel) {
+    return _.get(this, ['_etags', channel], null)
   }
 
-  async setETag(channel, value) {
+  setETag(channel, value) {
     return _.set(this, ['_etags', channel], value)
   }
 
-  calcETagKey(typename /* , whereOrValues */) {
+  calcQueryChannel(typename /* , args */) {
+    return typename
+  }
+
+  calcDotChannel(typename /* , args */) {
     return typename
   }
 
   async dependETagKey(context, typename, where) {
-    const key = this.calcETagKey(typename, where)
+    const key = this.calcQueryChannel(typename, where)
     _.set(context, ['eTags', key], await this.getETag(key))
   }
 
-  async mutateETag(dot, defaultType) {
+  mutateETag(dot, defaultType) {
     dot.$type = dot.$type || defaultType
-    const key = this.calcETagKey(dot.$type, dot)
-    // console.log('mutateETag', dot)
+    const key = this.calcDotChannel(dot.$type, dot)
     return this.setETag(key, new Date().toISOString())
   }
 
@@ -174,7 +181,6 @@ export default class Server {
     // TODO how to handle oldETags === {}
     const bools = await Promise.all(
       _.map(oldETags, async (oldETag, key) => {
-        // console.log('notMatchETags', key, oldETag, await this.getETag(key))
         return (await this.getETag(key)) !== oldETag
       })
     )

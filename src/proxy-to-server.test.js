@@ -23,14 +23,14 @@ test('mutate-and-eTags', async () => {
   await delay(10)
   expect(serverRes[0]).toEqual({
     result: { $type: 'Queries', templateById: { id: 'demo/new', $type: 'Template' } },
-    eTags: { Template: undefined },
+    eTags: { Template: null },
   })
 
   await proxy.mutate({ setTemplateById: { $args: { id: 'demo/new', count: 1 } } })
 
   expect(callServer).lastCalledWith([
     { spec: { $type: 'Mutations', setTemplateById: { $args: { count: 1, id: 'demo/new' } } } },
-    { spec: { templateById: { $args: 'demo/new' } }, notMatch: { Template: undefined } },
+    { spec: { templateById: { $args: 'demo/new' } }, notMatch: { Template: null } },
   ])
   expect(serverRes).toEqual([
     {
@@ -45,7 +45,7 @@ test('mutate-and-eTags', async () => {
 
   // proxy2 get new count after ping
   await proxy2.batchNow()
-  expect(callServer2).lastCalledWith([{ notMatch: { Template: undefined }, spec: { templateById: { $args: 'demo/new' } } }])
+  expect(callServer2).lastCalledWith([{ notMatch: { Template: null }, spec: { templateById: { $args: 'demo/new' } } }])
   expect(serverRes).toMatchObject([
     {
       eTags: { Template: expect.any(String) },

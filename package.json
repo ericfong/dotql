@@ -6,6 +6,7 @@
   "main": "build/node/index.js",
   "browser": "build/browser/index.js",
   "scripts": {
+    "prepare": "npm run build",
     "clean": "rm -rf build",
     "prebuild": "npm run clean",
     "build": "npm-run-all build:*",
