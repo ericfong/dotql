@@ -14,6 +14,19 @@ export const mixin = (target, mixins) => {
 //   return target
 // }
 
+export const promiseMapSeries = (list, func) => {
+  return _.reduce(
+    list,
+    (promise, v, k) => {
+      return promise.then(async acc => {
+        acc[k] = await func(v, k, list)
+        return acc
+      })
+    },
+    Promise.resolve(_.isArrayLikeObject(list) ? [] : {})
+  )
+}
+
 export const fetchJson = (url, option = {}, fetchFunc = global.fetch) => {
   const headers = (option.headers = { Accept: 'application/json', 'Content-Type': 'application/json', ...option.headers })
   if (option.body) {

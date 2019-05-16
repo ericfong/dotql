@@ -1,6 +1,8 @@
 import assert from 'assert'
 import _ from 'lodash'
 
+import { promiseMapSeries } from './util'
+
 const DEV = process.env.NODE_ENV !== 'production'
 
 const PRIMITIVE_TYPES = { String: 1, Int: 1, Float: 1, Boolean: 1, Object: 1 }
@@ -187,14 +189,7 @@ export default class Server {
 
   query(body, context = {}) {
     if (Array.isArray(body)) {
-      let p = Promise.resolve([])
-      _.forEach(body, eachBody => {
-        p = p.then(async resBatch => {
-          resBatch.push(await this.get(eachBody, context))
-          return resBatch
-        })
-      })
-      return p
+      return promiseMapSeries(body, eachBody => this.get(eachBody, context))
     }
     return this.get(body, context)
   }
