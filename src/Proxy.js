@@ -121,7 +121,7 @@ class SimpleProxy {
 }
 
 export default class Proxy extends SimpleProxy {
-  // conf props: customHandle, channelsDidChange
+  // conf props: channelsDidChange
 
   constructor(conf) {
     super(conf)
@@ -134,10 +134,6 @@ export default class Proxy extends SimpleProxy {
 
   // middleware-point
   handle(spec, option) {
-    if (this.customHandle) {
-      const handled = this.customHandle(spec, option)
-      if (handled !== undefined) return handled
-    }
     const key = this.toKey(spec, option)
     this.batchingKeys.push(key)
     this.batchDebounce()
@@ -154,10 +150,13 @@ export default class Proxy extends SimpleProxy {
       this.batchingKeys = []
       const metas = { ...this.metas }
 
-      const batchArr = _.map(batchingKeys, key => {
+      const batchArr = []
+      const batchOptions = []
+      _.forEach(batchingKeys, key => {
         const meta = metas[key]
         delete metas[key]
-        return { spec: meta.spec }
+        batchArr.push({ spec: meta.spec })
+        batchOptions.push(meta.option)
       })
 
       // attach rest of metas (they are watching)
@@ -165,11 +164,12 @@ export default class Proxy extends SimpleProxy {
         if (meta.watchCount > 0) {
           batchingKeys.push(key)
           batchArr.push({ spec: meta.spec, notMatch: meta.eTags })
+          batchOptions.push(meta.option)
         }
       })
 
       // await server call
-      const resBatch = (await this.callServer(batchArr)) || []
+      const resBatch = (await this.callServer(batchArr, batchOptions)) || []
 
       // call promises' resolves
       _.forEach(batchingKeys, (key, i) => {
