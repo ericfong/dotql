@@ -1,12 +1,12 @@
 import _ from 'lodash'
 import delay from 'delay'
-import { createProxy } from './Proxy'
+import Proxy from './Proxy'
 
-import { createServer } from './Server'
+import Server from './Server'
 import serverConf from '../test/serverConf'
 
 test('mutate-and-eTags', async () => {
-  const server = createServer(serverConf())
+  const server = new Server(serverConf())
   let serverRes
   const _callServer = async body => {
     const ret = await server.query(_.cloneDeep(body))
@@ -14,9 +14,9 @@ test('mutate-and-eTags', async () => {
     return ret
   }
   const callServer = jest.fn(_callServer)
-  const proxy = createProxy({ callServer })
+  const proxy = new Proxy({ callServer })
   const callServer2 = jest.fn(_callServer)
-  const proxy2 = createProxy({ callServer: callServer2 })
+  const proxy2 = new Proxy({ callServer: callServer2 })
 
   proxy.watch({ templateById: { $args: 'demo/new' } }, () => {})
   proxy2.watch({ templateById: { $args: 'demo/new' } }, () => {})
@@ -55,11 +55,11 @@ test('mutate-and-eTags', async () => {
 })
 
 test('http', async () => {
-  const server = createServer(serverConf())
+  const server = new Server(serverConf())
   const callServer = jest.fn(specs => {
     return server.query(specs)
   })
-  const proxy = createProxy({ callServer })
+  const proxy = new Proxy({ callServer })
   const p1 = proxy.query({ templateById: { $args: 'demo/new' } })
   const p2 = proxy.query({ templateById: { $args: 'demo/new', value: 1 } })
   expect(await Promise.all([p1, p2])).toMatchObject([

@@ -1,7 +1,5 @@
-import { mixin } from './util'
-
-const assert = require('assert')
-const _ = require('lodash')
+import assert from 'assert'
+import _ from 'lodash'
 
 const DEV = process.env.NODE_ENV !== 'production'
 
@@ -208,5 +206,3 @@ Call Sequence
 - get
 - resolve
 */
-
-export const createServer = (option, enhancers) => new (mixin(Server, enhancers))(option)

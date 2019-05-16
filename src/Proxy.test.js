@@ -1,13 +1,13 @@
 // import _ from 'lodash'
 import delay from 'delay'
 
-import { createProxy } from './Proxy'
+import Proxy from './Proxy'
 
 test('watching', async () => {
   const callServer = jest.fn(req => {
     return req.map(w => ({ result: w.spec, eTags: { k1: `${w.spec}-eTag` } }))
   })
-  const proxy = createProxy({ callServer })
+  const proxy = new Proxy({ callServer })
   const remove1 = proxy.watch('A', () => {})
   const remove2 = proxy.watch('A', () => {})
   expect(proxy.metas).toMatchObject({
@@ -42,7 +42,7 @@ test('batch', async () => {
   const callServer = jest.fn(req => {
     return req.map(s => ({ result: s.spec.toLowerCase() }))
   })
-  const proxy = createProxy({ callServer })
+  const proxy = new Proxy({ callServer })
   const p1 = proxy.query('A')
   const p2 = proxy.query('B')
   expect(await Promise.all([p1, p2])).toEqual(['a', 'b'])

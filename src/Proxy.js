@@ -3,7 +3,6 @@ import _ from 'lodash'
 import stringify from 'fast-stable-stringify'
 
 import RxMap from './RxMap'
-import { mixin } from './util'
 
 const DEV = process.env.NODE_ENV !== 'production'
 
@@ -24,7 +23,7 @@ const singleAsync = (obj, key, asyncFunc) => {
   return doFunc()
 }
 
-export class SimpleProxy {
+class SimpleProxy {
   // conf props: callServer, maxAge
 
   constructor(conf) {
@@ -80,10 +79,7 @@ export class SimpleProxy {
     if (map.has(key)) {
       oldCache = map.get(key)
       const expires = _.get(this.metas, [key, 'expires'])
-      if (typeof expires === 'number' && Date.now() > expires) {
-        this.delete(key)
-        // delete cache, refetch and return oldCache
-      } else {
+      if (!(typeof expires === 'number' && Date.now() > expires)) {
         return oldCache
       }
     }
@@ -241,5 +237,3 @@ interface Meta {
 }
 // del metaKey if (watchCount === 0 || !resolve)
 */
-
-export const createProxy = (option, enhancers) => new (mixin(Proxy, enhancers))(option)

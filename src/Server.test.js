@@ -1,9 +1,9 @@
 // import _ from 'lodash'
 
-import { createServer } from './Server'
+import Server from './Server'
 import serverConf from '../test/serverConf'
 
-const server = createServer(serverConf())
+const server = new Server(serverConf())
 
 test('queryNormalizeSpec', async () => {
   expect(server.queryNormalizeSpec({ $type: 'Queries', $extend: 'templateById', where: 'demo/new' })).toMatchObject({
