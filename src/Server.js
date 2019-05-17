@@ -140,8 +140,7 @@ export default class Server {
     }
 
     const isMutation = (context.isMutation = spec.$type === MUTATIONS_TYPE)
-    spec.$type = isMutation ? MUTATIONS_TYPE : QUERIES_TYPE
-    const normSpec = this.queryNormalizeSpec(spec)
+    const normSpec = this.queryNormalizeSpec({ ...spec, $type: isMutation ? MUTATIONS_TYPE : QUERIES_TYPE })
     const dot = { $type: isMutation ? MUTATIONS_TYPE : QUERIES_TYPE }
     const result = await this.resolve(dot, normSpec, context)
     return returnResult(result)

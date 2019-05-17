@@ -19,7 +19,7 @@ Built-in implementation for live-query (by ping or/and push)
 - small in size, all-in-one instead of few heavy weighted packages
 - built-in implementation for live-query (by ping or/and push)
 
-### Code Demo
+### Basic Usage
 
 ```js
 dotqlProxy.query({
@@ -41,6 +41,35 @@ graphqlClient.query(gql`
     }
   }
 `)
+```
+
+### Demo
+
+```js
+const server = new Server(serverConf())
+
+const proxy = new Proxy({
+  callServer(specs) {
+    return server.query(specs)
+  },
+})
+
+// query
+const promise = proxy.query({ templateById: { $args: 'demo/new' } })
+expect(await promise).toMatchObject({ $type: 'Queries', templateById: { $type: 'Template', id: 'demo/new' } })
+
+// watch
+let watchData
+const unwatch = proxy.watch({ templateById: { $args: 'demo/new' } }, (data, error) => {
+  watchData = data
+})
+await delay()
+expect(watchData).toMatchObject({ $type: 'Queries', templateById: { $type: 'Template', id: 'demo/new' } })
+
+// mutate
+await proxy.mutate({ setTemplateById: { $args: { id: 'demo/new', count: 1 } } })
+await delay()
+expect(watchData).toMatchObject({ $type: 'Queries', templateById: { $type: 'Template', id: 'demo/new', count: 1 } })
 ```
 
 ### Size
