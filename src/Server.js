@@ -7,17 +7,19 @@ const DEV = process.env.NODE_ENV !== 'production'
 
 const PRIMITIVE_TYPES = { String: 1, Int: 1, Float: 1, Boolean: 1, Object: 1 }
 const TYPE_KEY = '$type'
-const EXTEND_KEY = '$extend'
 const ARGUMENTS_KEY = '$args'
 const AS_KEY = '$as'
 const OPERATORS = {
   [TYPE_KEY]: 1,
-  [EXTEND_KEY]: 1,
+  $run: 1,
   [ARGUMENTS_KEY]: 1,
   [AS_KEY]: 1,
 }
 export const QUERIES_TYPE = 'Queries'
 export const MUTATIONS_TYPE = 'Mutations'
+
+// const isMutate = runStr => _.startsWith(runStr, 'mutate ')
+// const getPrepareName = runStr => `${runStr}`.substr(7)
 
 const prepareFieldResult = async (_result, fieldType, func) => {
   if (!_result || PRIMITIVE_TYPES[fieldType]) return _result
@@ -38,7 +40,7 @@ export default class Server {
   // conf props: getETag, setETag, calcQueryChannel, calcDotChannel
 
   constructor(conf) {
-    this.extensibles = {}
+    this.prepared = {}
     Object.assign(this, conf)
   }
 
@@ -103,11 +105,10 @@ export default class Server {
   // ----------------------------------------------------------------------------------------------
 
   queryNormalizeSpec(spec) {
-    const extendName = spec[EXTEND_KEY]
-    if (extendName) {
-      const extensible = _.get(this.extensibles, [spec[TYPE_KEY], extendName])
-      if (DEV) invariant(extensible, `extensibles ${spec[TYPE_KEY]}.${extendName} is missing`)
-      const extended = _.cloneDeepWith(extensible, value => {
+    if (spec.$run) {
+      const prepared = _.get(this.prepared, [spec.$type, spec.$run])
+      if (DEV) invariant(prepared, `prepared statement ${spec.$type}.${spec.$run} is missing`)
+      const newSpec = _.cloneDeepWith(prepared, value => {
         if (value) {
           if (value.$ref) {
             if (DEV) invariant(value.$ref in spec, `$ref ${value.$ref} is missing`)
@@ -119,8 +120,8 @@ export default class Server {
         }
         return undefined
       })
-      extended.$type = spec.$type
-      return extended
+      newSpec.$type = spec.$type
+      return newSpec
     }
     // string = prepared query
     return spec

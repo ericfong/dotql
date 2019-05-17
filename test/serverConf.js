@@ -44,7 +44,7 @@ export default () => {
         },
       },
     },
-    extensibles: {
+    prepared: {
       Queries: {
         templateById: { templateById: { $args: { $ref: 'where' } } },
       },

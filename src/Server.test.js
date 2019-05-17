@@ -6,19 +6,19 @@ import serverConf from '../test/serverConf'
 const server = new Server(serverConf())
 
 test('queryNormalizeSpec', async () => {
-  expect(server.queryNormalizeSpec({ $type: 'Queries', $extend: 'templateById', where: 'demo/new' })).toMatchObject({
+  expect(server.queryNormalizeSpec({ $type: 'Queries', $run: 'templateById', where: 'demo/new' })).toMatchObject({
     $type: 'Queries',
     templateById: { $args: 'demo/new' },
   })
 
-  expect(await server.query({ $extend: 'templateById', where: 'demo/new' })).toMatchObject({
+  expect(await server.query({ $run: 'templateById', where: 'demo/new' })).toMatchObject({
     $type: 'Queries',
     templateById: { $type: 'Template', id: 'demo/new' },
   })
 
-  expect(
-    await server.query({ $type: 'Mutations', $extend: 'setTemplateById', args: { count: 1, id: 'demo/new' } })
-  ).toMatchObject({ setTemplateById: { $type: 'Template', id: 'demo/new' } })
+  expect(await server.query({ $type: 'Mutations', $run: 'setTemplateById', args: { count: 1, id: 'demo/new' } })).toMatchObject({
+    setTemplateById: { $type: 'Template', id: 'demo/new' },
+  })
 })
 
 test('Mutations', async () => {
