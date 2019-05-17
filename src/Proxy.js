@@ -23,13 +23,17 @@ const singleAsync = (obj, key, asyncFunc) => {
   return doFunc()
 }
 
-class SimpleProxy {
-  // conf props: callServer, maxAge
+export default class Proxy {
+  // conf props: callServer, maxAge, channelsDidChange
 
   constructor(conf) {
     Object.assign(this, conf)
     if (!this.map) this.map = new RxMap()
     this.metas = {}
+    this.batchDebounce = _.debounce(() => this.batchCheck())
+    if (this.channelsDidChange) {
+      this.emitChannelsDidChangeDebounce = _.debounce(() => this.emitChannelsDidChange())
+    }
   }
 
   /* #region utils  */
@@ -110,59 +114,45 @@ class SimpleProxy {
     }
   }
 
-  // middleware-point
-  handle(spec) {
-    return this.callServer(spec)
-  }
-
   callServer() {
     if (DEV) console.error('callServer function is missing')
   }
-}
 
-export default class Proxy extends SimpleProxy {
-  // conf props: channelsDidChange
-
-  constructor(conf) {
-    super(conf)
-    this.batchingKeys = []
-    this.batchDebounce = _.debounce(() => this.batchCheck())
-    if (this.channelsDidChange) {
-      this.emitChannelsDidChangeDebounce = _.debounce(() => this.emitChannelsDidChange())
-    }
-  }
+  batchings = []
 
   // middleware-point
   handle(spec, option) {
     const key = this.toKey(spec, option)
-    this.batchingKeys.push(key)
+    const batching = { spec, option }
+    this.batchings.push(batching)
     this.batchDebounce()
-    return this.batchCreatePromise(spec, option, key)
+    this.setMeta(key, batching)
+    return new Promise((_resolve, _reject) => {
+      option.resolve = _resolve
+      option.reject = _reject
+    })
   }
 
   batchCheck() {
-    return this.batchingKeys.length > 0 ? this.batchNow() : Promise.resolve()
+    return this.batchings.length > 0 ? this.batchNow() : Promise.resolve()
   }
 
   batchNow() {
     return singleAsync(this, '_batchFlushPromise', async () => {
-      const { batchingKeys } = this
-      this.batchingKeys = []
-      const metas = { ...this.metas }
+      const { batchings } = this
+      this.batchings = []
+      const restMetas = { ...this.metas }
 
       const batchArr = []
       const batchOptions = []
-      _.forEach(batchingKeys, key => {
-        const meta = metas[key]
-        delete metas[key]
-        batchArr.push({ spec: meta.spec })
-        batchOptions.push(meta.option)
+      _.forEach(batchings, ({ spec, option }) => {
+        batchArr.push({ spec })
+        batchOptions.push(option)
+        delete restMetas[option.key]
       })
-
       // attach rest of metas (they are watching)
-      _.forEach(metas, (meta, key) => {
+      _.forEach(restMetas, meta => {
         if (meta.watchCount > 0) {
-          batchingKeys.push(key)
           batchArr.push({ spec: meta.spec, notMatch: meta.eTags })
           batchOptions.push(meta.option)
         }
@@ -171,39 +161,28 @@ export default class Proxy extends SimpleProxy {
       // await server call
       const resBatch = (await this.callServer(batchArr, batchOptions)) || []
 
-      // call promises' resolves
-      _.forEach(batchingKeys, (key, i) => {
-        this.batchAccept(key, resBatch[i])
+      _.forEach(batchOptions, (option, i) => {
+        this.batchAccept(resBatch[i], option)
       })
     })
   }
 
-  batchCreatePromise(spec, option, key) {
-    const meta = this.setMeta(key, { spec, option, eTags: null })
-    return new Promise((_resolve, _reject) => {
-      meta.resolve = _resolve
-      meta.reject = _reject
-    })
-  }
-
-  batchAccept(key, res) {
-    const meta = this.metas[key] || {}
-    if (meta.resolve) {
-      if (res.error) meta.reject(res.error)
-      else meta.resolve(res.result)
-      delete meta.resolve
-      delete meta.reject
+  batchAccept(res, option) {
+    const { key } = option
+    if (option.resolve) {
+      if (res.error) option.reject(res.error)
+      else option.resolve(res.result)
+      delete option.resolve
+      delete option.reject
     } else {
-      // no meta.resolve means no direct query(), it is from watching
+      // no resolve means no direct query(), it is from watching
       const p = res.error ? Promise.reject(res.error) : Promise.resolve(res.result)
-      this.setCache(key, p, meta.option)
+      this.setCache(key, p, option)
     }
-    // record eTags
-    if (res.eTags !== undefined) {
-      // return eTags = undefined means no change
-      meta.eTags = res.eTags
-      this.metas[key] = meta
 
+    // record eTags (eTags == undefined means no change)
+    if (res.eTags !== undefined) {
+      this.setMeta(key, { eTags: res.eTags })
       if (this.channelsDidChange) this.emitChannelsDidChangeDebounce()
     }
   }

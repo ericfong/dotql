@@ -15,7 +15,7 @@ test('watching', async () => {
   })
 
   await delay()
-  expect(callServer).lastCalledWith([{ spec: 'A' }])
+  expect(callServer).lastCalledWith([{ spec: 'A' }], [{ key: 'A' }])
 
   const remove3 = proxy.watch('B', () => {})
   expect(proxy.metas).toMatchObject({
@@ -24,10 +24,13 @@ test('watching', async () => {
   })
 
   await delay()
-  expect(callServer).lastCalledWith([{ spec: 'B' }, { spec: 'A', notMatch: { k1: 'A-eTag' } }])
+  expect(callServer).lastCalledWith([{ spec: 'B' }, { spec: 'A', notMatch: { k1: 'A-eTag' } }], [{ key: 'B' }, { key: 'A' }])
 
   await proxy.batchNow()
-  expect(callServer).lastCalledWith([{ spec: 'A', notMatch: { k1: 'A-eTag' } }, { spec: 'B', notMatch: { k1: 'B-eTag' } }])
+  expect(callServer).lastCalledWith(
+    [{ spec: 'A', notMatch: { k1: 'A-eTag' } }, { spec: 'B', notMatch: { k1: 'B-eTag' } }],
+    [{ key: 'A' }, { key: 'B' }]
+  )
 
   remove1()
   remove2()
@@ -47,5 +50,5 @@ test('batch', async () => {
   const p2 = proxy.query('B')
   expect(await Promise.all([p1, p2])).toEqual(['a', 'b'])
   expect(callServer).toBeCalledTimes(1)
-  expect(callServer).lastCalledWith([{ spec: 'A' }, { spec: 'B' }])
+  expect(callServer).lastCalledWith([{ spec: 'A' }, { spec: 'B' }], [{ key: 'A' }, { key: 'B' }])
 })
