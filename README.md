@@ -9,7 +9,7 @@ graphql like but query by plain json. No more DSL or AST parsing
 ![npm](https://img.shields.io/npm/l/dotql.svg?style=flat-square)
 ![npm](https://img.shields.io/github/languages/code-size/ericfong/dotql.svg?style=flat-square)
 
-A graphql like client and server without graphql DSL, faster parsing, and easy to customize interface.
+A graphql like client and server without graphql DSL, faster parsing.
 
 Built-in implementation for live-query (by ping or/and push)
 
@@ -18,13 +18,12 @@ Built-in implementation for live-query (by ping or/and push)
 - strictly follow graphql but in json, no more DSL parsing
 - small in size, all-in-one instead of few heavy weighted packages
 - built-in implementation for live-query (by ping or/and push)
-- customizable interface
 
 ### Code Demo
 
 ```js
 dotqlProxy.query({
-  userById: {
+  myUser: {
     name: 1,
     photo: 1,
   },
@@ -36,18 +35,12 @@ instead of
 ```js
 graphqlClient.query(gql`
   {
-    userById {
+    myUser {
       name
       photo
     }
   }
 `)
-```
-
-### Download & Installation
-
-```shell
-npm i dotql
 ```
 
 ### Size

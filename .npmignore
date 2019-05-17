@@ -1,4 +1,6 @@
-tmp
-*.md
 src
 test
+tmp
+
+.*
+/babel.config.js
