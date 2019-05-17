@@ -1,4 +1,4 @@
-import assert from 'assert'
+import invariant from 'invariant'
 import _ from 'lodash'
 
 import { promiseMapSeries } from './util'
@@ -73,7 +73,7 @@ export default class Server {
     if (PRIMITIVE_TYPES[typename]) return dot
 
     const Type = schema[typename]
-    if (DEV) assert(Type, `Type "${typename}" is missing in schema`)
+    if (DEV) invariant(Type, `Type "${typename}" is missing in schema`)
 
     // sub-fields
     await Promise.all(
@@ -82,7 +82,7 @@ export default class Server {
 
         // get field & resolve
         const field = Type[fieldName]
-        if (DEV) assert(field, `Field ${fieldName} is missing in type ${typename}`)
+        if (DEV) invariant(field, `Field ${fieldName} is missing in type ${typename}`)
 
         // resolveField
         const resolveAs = spec[AS_KEY] || fieldName
@@ -106,11 +106,11 @@ export default class Server {
     const extendName = spec[EXTEND_KEY]
     if (extendName) {
       const extensible = _.get(this.extensibles, [spec[TYPE_KEY], extendName])
-      if (DEV) assert(extensible, `extensibles ${spec[TYPE_KEY]}.${extendName} is missing`)
+      if (DEV) invariant(extensible, `extensibles ${spec[TYPE_KEY]}.${extendName} is missing`)
       const extended = _.cloneDeepWith(extensible, value => {
         if (value) {
           if (value.$ref) {
-            if (DEV) assert(value.$ref in spec, `$ref ${value.$ref} is missing`)
+            if (DEV) invariant(value.$ref in spec, `$ref ${value.$ref} is missing`)
             return spec[value.$ref]
           }
           if (value.$refs) {

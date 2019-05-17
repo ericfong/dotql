@@ -1,4 +1,3 @@
-// import assert from 'assert'
 import _ from 'lodash'
 import stringify from 'fast-stable-stringify'
 
@@ -25,6 +24,7 @@ const singleAsync = (obj, key, asyncFunc) => {
 
 export default class Proxy {
   // conf props: callServer, maxAge, channelsDidChange
+  // ssrMode:true, .extract(), .restore(), ssr:false
 
   constructor(conf) {
     Object.assign(this, conf)
