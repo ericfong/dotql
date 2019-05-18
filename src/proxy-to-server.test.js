@@ -30,7 +30,7 @@ test('mutate-and-eTags', async () => {
 
   expect(callServer).lastCalledWith(
     [
-      { spec: { $type: 'Mutations', setTemplateById: { $args: { count: 1, id: 'demo/new' } } } },
+      { spec: { $mutation: 1, setTemplateById: { $args: { count: 1, id: 'demo/new' } } } },
       { spec: { templateById: { $args: 'demo/new' } }, notMatch: { Template: null } },
     ],
     [{ cachePolicy: 'no-cache', key: expect.any(String) }, { key: expect.any(String) }]

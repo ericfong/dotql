@@ -11,7 +11,8 @@ const ARGUMENTS_KEY = '$args'
 const AS_KEY = '$as'
 const OPERATORS = {
   [TYPE_KEY]: 1,
-  $run: 1,
+  $query: 1,
+  $mutation: 1,
   [ARGUMENTS_KEY]: 1,
   [AS_KEY]: 1,
 }
@@ -105,9 +106,12 @@ export default class Server {
   // ----------------------------------------------------------------------------------------------
 
   queryNormalizeSpec(spec) {
-    if (spec.$run) {
-      const prepared = _.get(this.prepared, [spec.$type, spec.$run])
-      if (DEV) invariant(prepared, `prepared statement ${spec.$type}.${spec.$run} is missing`)
+    const { $query, $mutation } = spec
+    const strQuery = _.isString($query) && $query
+    const strMut = _.isString($mutation) && $mutation
+    if (strQuery || strMut) {
+      const prepared = strMut ? this.prepared.Mutations[strMut] : this.prepared.Queries[strQuery]
+      if (DEV) invariant(prepared, `prepared statement ${strMut ? 'Mutations' : 'Queries'}.${strMut || strQuery} is missing`)
       const newSpec = _.cloneDeepWith(prepared, value => {
         if (value) {
           if (value.$ref) {
@@ -120,7 +124,8 @@ export default class Server {
         }
         return undefined
       })
-      newSpec.$type = spec.$type
+      if (strMut) newSpec.$mutation = strMut
+      if (strQuery) newSpec.$query = strQuery
       return newSpec
     }
     // string = prepared query
@@ -140,9 +145,10 @@ export default class Server {
       return returnResult(undefined)
     }
 
-    const isMutation = (context.isMutation = spec.$type === MUTATIONS_TYPE)
-    const normSpec = this.queryNormalizeSpec({ ...spec, $type: isMutation ? MUTATIONS_TYPE : QUERIES_TYPE })
+    const normSpec = this.queryNormalizeSpec(spec)
+    const isMutation = (context.isMutation = spec.$mutation)
     const dot = { $type: isMutation ? MUTATIONS_TYPE : QUERIES_TYPE }
+    // console.log(normSpec, spec, dot)
     const result = await this.resolve(dot, normSpec, context)
     return returnResult(result)
   }

@@ -6,17 +6,19 @@ import serverConf from '../test/serverConf'
 const server = new Server(serverConf())
 
 test('queryNormalizeSpec', async () => {
-  expect(server.queryNormalizeSpec({ $type: 'Queries', $run: 'templateById', where: 'demo/new' })).toMatchObject({
-    $type: 'Queries',
+  expect(server.queryNormalizeSpec({ $query: 'templateById', where: 'demo/new' })).toMatchObject({
+    $query: 'templateById',
     templateById: { $args: 'demo/new' },
   })
 
-  expect(await server.query({ $run: 'templateById', where: 'demo/new' })).toMatchObject({
+  expect(await server.query({ $query: 'templateById', where: 'demo/new' })).toMatchObject({
     $type: 'Queries',
     templateById: { $type: 'Template', id: 'demo/new' },
   })
 
-  expect(await server.query({ $type: 'Mutations', $run: 'setTemplateById', args: { count: 1, id: 'demo/new' } })).toMatchObject({
+  expect(
+    await server.query({ $type: 'Mutations', $mutation: 'setTemplateById', args: { count: 1, id: 'demo/new' } })
+  ).toMatchObject({
     setTemplateById: { $type: 'Template', id: 'demo/new' },
   })
 })
@@ -24,7 +26,7 @@ test('queryNormalizeSpec', async () => {
 test('Mutations', async () => {
   expect(
     await server.query({
-      $type: 'Mutations',
+      $mutation: 1,
       setTemplateById: {
         $args: { id: 'demo/new', count: 1 },
         value: 1,

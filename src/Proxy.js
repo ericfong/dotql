@@ -94,7 +94,7 @@ export default class Proxy {
   }
 
   mutate(spec, option = {}) {
-    spec.$type = 'Mutations'
+    spec.$mutation = spec.$mutation || 1
     option.cachePolicy = 'no-cache'
     return this.handle(spec, option)
   }
