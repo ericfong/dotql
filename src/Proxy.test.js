@@ -10,7 +10,7 @@ test('watching', async () => {
   const proxy = new Proxy({ callServer })
   const remove1 = proxy.watch('A', () => {})
   const remove2 = proxy.watch('A', () => {})
-  expect(proxy.metas).toMatchObject({
+  expect(proxy.map.metas).toMatchObject({
     A: { spec: 'A', watchCount: 2, option: { key: 'A' } },
   })
 
@@ -18,7 +18,7 @@ test('watching', async () => {
   expect(callServer).lastCalledWith([{ spec: 'A' }], [{ key: 'A' }])
 
   const remove3 = proxy.watch('B', () => {})
-  expect(proxy.metas).toMatchObject({
+  expect(proxy.map.metas).toMatchObject({
     A: { spec: 'A', watchCount: 2, option: { key: 'A' }, eTags: { k1: 'A-eTag' } },
     B: { spec: 'B', watchCount: 1, option: { key: 'B' } },
   })
@@ -35,7 +35,7 @@ test('watching', async () => {
   remove1()
   remove2()
   remove3()
-  expect(proxy.metas).toMatchObject({
+  expect(proxy.map.metas).toMatchObject({
     A: { spec: 'A', watchCount: 0, eTags: { k1: 'A-eTag' } },
     B: { spec: 'B', watchCount: 0, eTags: { k1: 'B-eTag' } },
   })

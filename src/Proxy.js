@@ -29,7 +29,7 @@ export default class Proxy {
   constructor(conf) {
     Object.assign(this, conf)
     if (!this.map) this.map = new RxMap()
-    this.metas = {}
+
     this.batchDebounce = _.debounce(() => this.batchCheck())
     if (this.channelsDidChange) {
       this.emitChannelsDidChangeDebounce = _.debounce(() => this.emitChannelsDidChange())
@@ -46,25 +46,15 @@ export default class Proxy {
   setCache(key, promise, option) {
     this.map.set(key, promise)
     const maxAge = option.maxAge || this.maxAge
-    this.setMeta(key, { expires: typeof maxAge === 'number' ? Date.now() + maxAge : undefined })
-  }
-
-  setMeta(key, values) {
-    return (this.metas[key] = Object.assign(this.metas[key] || {}, values))
-  }
-
-  updateMeta(key, values) {
-    return Object.assign(this.metas[key], values)
+    this.map.setMeta(key, { expires: typeof maxAge === 'number' ? Date.now() + maxAge : undefined })
   }
 
   delete(key) {
     this.map.delete(key)
-    delete this.metas[key]
   }
 
   clear() {
     this.map.clear()
-    this.metas = {}
   }
   /* #endregion */
 
@@ -82,7 +72,7 @@ export default class Proxy {
     let oldCache
     if (map.has(key)) {
       oldCache = map.get(key)
-      const expires = _.get(this.metas, [key, 'expires'])
+      const expires = this.map.getMeta(key, 'expires')
       if (!(typeof expires === 'number' && Date.now() > expires)) {
         return oldCache
       }
@@ -90,6 +80,7 @@ export default class Proxy {
 
     const newPromise = this.handle(spec, option)
     this.setCache(key, newPromise, option)
+    this.map.setMeta(key, { spec, option })
     return oldCache || newPromise
   }
 
@@ -106,11 +97,11 @@ export default class Proxy {
     const p = this.query(spec, option)
     if (hitCache) Promise.resolve(p).then(onNext)
     // listen
-    this.setMeta(key, { watchCount: _.get(this.metas, [key, 'watchCount'], 0) + 1, spec, option })
+    this.map.setMeta(key, { watchCount: (this.map.getMeta(key, 'watchCount') || 0) + 1, spec, option })
     const removeListener = this.map.listen(key, onNext)
     return () => {
       removeListener()
-      --this.metas[key].watchCount
+      --this.map.getMeta(key).watchCount
     }
   }
 
@@ -122,11 +113,8 @@ export default class Proxy {
 
   // middleware-point
   handle(spec, option) {
-    const key = this.toKey(spec, option)
-    const batching = { spec, option }
-    this.batchings.push(batching)
+    this.batchings.push({ spec, option })
     this.batchDebounce()
-    this.setMeta(key, batching)
     return new Promise((_resolve, _reject) => {
       option.resolve = _resolve
       option.reject = _reject
@@ -141,7 +129,7 @@ export default class Proxy {
     return singleAsync(this, '_batchFlushPromise', async () => {
       const { batchings } = this
       this.batchings = []
-      const restMetas = { ...this.metas }
+      const restMetas = { ...this.map.getMetas() }
 
       const batchArr = []
       const batchOptions = []
@@ -182,7 +170,7 @@ export default class Proxy {
 
     // record eTags (eTags == undefined means no change)
     if (res.eTags !== undefined) {
-      this.setMeta(key, { eTags: res.eTags })
+      this.map.setMeta(key, { eTags: res.eTags })
       if (this.channelsDidChange) this.emitChannelsDidChangeDebounce()
     }
   }
@@ -190,7 +178,7 @@ export default class Proxy {
   emitChannelsDidChange() {
     if (this.channelsDidChange) {
       const newETags = _.transform(
-        this.metas,
+        this.map.getMetas(),
         (acc, meta) => {
           _.assign(acc, meta.eTags)
         },
