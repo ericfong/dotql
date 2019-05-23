@@ -1,7 +1,7 @@
 import invariant from 'invariant'
 import _ from 'lodash'
 
-import { promiseMapSeries } from './util'
+import { promiseMapSeries, promiseMap } from './util'
 
 const DEV = process.env.NODE_ENV !== 'production'
 
@@ -19,22 +19,16 @@ const OPERATORS = {
 export const QUERIES_TYPE = 'Queries'
 export const MUTATIONS_TYPE = 'Mutations'
 
-// const isMutate = runStr => _.startsWith(runStr, 'mutate ')
-// const getPrepareName = runStr => `${runStr}`.substr(7)
-
-const prepareFieldResult = async (_result, fieldType, func) => {
-  if (!_result || PRIMITIVE_TYPES[fieldType]) return _result
-  // console.log('prepareFieldResult', _result, fieldType)
+const loopFieldResult = async (result, fieldType, func) => {
+  if (!result) return result
   const isArrayType = _.isArray(fieldType)
-  const result = isArrayType ? _result : [_result]
-  const itemType = isArrayType ? _.head(fieldType) : fieldType
-  const newResult = await Promise.all(
-    _.map(result, item => {
-      item.$type = itemType
-      return func(item)
+  if (isArrayType) {
+    const subTypename = _.head(fieldType)
+    return promiseMap(result, item => {
+      return func(item, subTypename)
     })
-  )
-  return isArrayType ? newResult : _.head(newResult)
+  }
+  return func(result, fieldType)
 }
 
 export default class Server {
@@ -45,37 +39,31 @@ export default class Server {
     Object.assign(this, conf)
   }
 
-  async resolveField(dot, spec, context, info) {
+  async resolveField(dot, fieldArgs, context, info) {
     const { field, fieldName } = info
     if (!field.resolve) return dot[fieldName]
 
-    const fieldArgs = spec[ARGUMENTS_KEY]
     const isArrayType = _.isArray(field.type)
-    const fieldItemType = isArrayType ? _.head(field.type) : field.type
-    const notPrimitiveType = !PRIMITIVE_TYPES[fieldItemType]
+    const subTypename = isArrayType ? _.head(field.type) : field.type
+    const notPrimitiveType = !PRIMITIVE_TYPES[subTypename]
 
     if (!context.isMutation && notPrimitiveType) {
-      await this.dependETagKey(context, fieldItemType, fieldArgs)
+      await this.dependETagKey(context, subTypename, fieldArgs)
     }
 
     const result = field.resolve.call(this, dot, fieldArgs, context, info)
 
     if (context.isMutation && notPrimitiveType) {
-      await Promise.all(
-        _.map(isArrayType ? result : [result], resultItem => {
-          return this.mutateETag(resultItem, fieldItemType)
-        })
-      )
+      await promiseMap(isArrayType ? result : [result], resultItem => {
+        return this.mutateETag(resultItem, subTypename)
+      })
     }
     return result
   }
 
-  async resolve(dot, specs, context) {
-    const { schema } = this
+  async resolveDot(dot, specs, context) {
     const typename = dot.$type
-    if (PRIMITIVE_TYPES[typename]) return dot
-
-    const Type = schema[typename]
+    const Type = this.schema[typename]
     if (DEV) invariant(Type, `Type "${typename}" is missing in schema`)
 
     // sub-fields
@@ -89,17 +77,19 @@ export default class Server {
 
         // resolveField
         const resolveAs = spec[AS_KEY] || fieldName
-        const result = await this.resolveField(dot, spec, context, {
+        const result = await this.resolveField(dot, spec[ARGUMENTS_KEY], context, {
           field,
           fieldName,
           resolveAs,
-          resolveOthers: (q, _dot = dot) => this.resolve(_dot, q, context),
+          resolveOthers: (q, _dot = dot) => this.resolveDot(_dot, q, context),
         })
-        dot[resolveAs] = await prepareFieldResult(result, field.type, item => this.resolve(item, spec, context))
+        dot[resolveAs] = await loopFieldResult(result, field.type, (item, subTypename) => {
+          if (PRIMITIVE_TYPES[subTypename]) return item
+          item.$type = subTypename
+          return this.resolveDot(item, spec, context)
+        })
       })
     )
-
-    // console.log('resolveRecursive-out:', dot, specs)
     return dot
   }
 
@@ -148,8 +138,7 @@ export default class Server {
     const normSpec = this.queryNormalizeSpec(spec)
     const isMutation = (context.isMutation = spec.$mutation)
     const dot = { $type: isMutation ? MUTATIONS_TYPE : QUERIES_TYPE }
-    // console.log(normSpec, spec, dot)
-    const result = await this.resolve(dot, normSpec, context)
+    const result = await this.resolveDot(dot, normSpec, context)
     return returnResult(result)
   }
 

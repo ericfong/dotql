@@ -48,9 +48,9 @@ test('Queries', async () => {
   })
 })
 
-test('resolve', async () => {
+test('resolveDot', async () => {
   expect(
-    await server.resolve(
+    await server.resolveDot(
       {
         $type: 'Template',
         id: 'demo/new',
@@ -64,7 +64,7 @@ test('resolve', async () => {
     value: { defaultTemplate: true },
   })
   expect(
-    await server.resolve(
+    await server.resolveDot(
       {
         $type: 'Template',
         id: 'demo/new2',

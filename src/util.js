@@ -27,6 +27,8 @@ export const promiseMapSeries = (list, func) => {
   )
 }
 
+export const promiseMap = (list, func) => Promise.all(_.map(list, func))
+
 export const fetchJson = (url, option = {}, fetchFunc = global.fetch) => {
   const headers = (option.headers = { Accept: 'application/json', 'Content-Type': 'application/json', ...option.headers })
   if (option.body) {
