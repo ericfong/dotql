@@ -8,19 +8,18 @@ const DEV = process.env.NODE_ENV !== 'production'
 const PRIMITIVE_TYPES = { String: 1, Int: 1, Float: 1, Boolean: 1, Object: 1 }
 const TYPE_KEY = '$type'
 const ARGUMENTS_KEY = '$args'
-const AS_KEY = '$as'
 const OPERATORS = {
   [TYPE_KEY]: 1,
   $query: 1,
   $mutation: 1,
   [ARGUMENTS_KEY]: 1,
-  [AS_KEY]: 1,
+  $from: 1,
 }
 export const QUERIES_TYPE = 'Queries'
 export const MUTATIONS_TYPE = 'Mutations'
 
 const loopFieldResult = async (result, fieldType, func) => {
-  if (!result) return result
+  if (!result || !fieldType) return result
   const isArrayType = _.isArray(fieldType)
   if (isArrayType) {
     const subTypename = _.head(fieldType)
@@ -41,7 +40,6 @@ export default class Server {
 
   async resolveField(dot, fieldArgs, context, info) {
     const { field, fieldName } = info
-    if (!field.resolve) return dot[fieldName]
 
     const isArrayType = _.isArray(field.type)
     const subTypename = isArrayType ? _.head(field.type) : field.type
@@ -68,22 +66,29 @@ export default class Server {
 
     // sub-fields
     await Promise.all(
-      _.map(specs, async (spec, fieldName) => {
-        if (OPERATORS[fieldName]) return // ignore operator
+      _.map(specs, async (spec, outputKey) => {
+        if (OPERATORS[outputKey]) return // ignore operator
+
+        // use this type field to resolve
+        const fieldName = spec.$from || outputKey
 
         // get field & resolve
         const field = Type[fieldName]
-        if (DEV) invariant(field, `Field ${fieldName} is missing in type ${typename}`)
+        const resolve = field && field.resolve
+
+        if (DEV) invariant(resolve || fieldName in dot, `Cannot resolve ${fieldName} from type ${typename}`)
 
         // resolveField
-        const resolveAs = spec[AS_KEY] || fieldName
-        const result = await this.resolveField(dot, spec[ARGUMENTS_KEY], context, {
-          field,
-          fieldName,
-          resolveAs,
-          resolveOthers: (q, _dot = dot) => this.resolveDot(_dot, q, context),
-        })
-        dot[resolveAs] = await loopFieldResult(result, field.type, (item, subTypename) => {
+        const outputValue = resolve
+          ? await this.resolveField(dot, spec[ARGUMENTS_KEY], context, {
+            field,
+            fieldName,
+            outputKey,
+            resolveOthers: (q, _dot = dot) => this.resolveDot(_dot, q, context),
+          })
+          : dot[fieldName]
+
+        dot[outputKey] = await loopFieldResult(outputValue, field && field.type, (item, subTypename) => {
           if (PRIMITIVE_TYPES[subTypename]) return item
           item.$type = subTypename
           return this.resolveDot(item, spec, context)
