@@ -1,14 +1,10 @@
 import _ from 'lodash'
 
-export default () => {
+export default ({ preresolve } = {}) => {
   const templates = {}
   return {
     schema: {
       Template: {
-        id: {
-          type: 'String',
-          resolve: dot => `${dot.projectId}/${dot.name}`,
-        },
         projectId: {
           type: 'String',
           resolve: dot => dot.projectId || dot.id.split('/')[0],
@@ -24,7 +20,7 @@ export default () => {
             return dot.projectId === 'demo' && dot.name === 'new' ? { defaultTemplate: true } : JSON.parse(dot.json)
           },
         },
-        $mutate: (dot, args) => Object.assign(dot, args),
+        preresolve,
       },
       Queries: {
         templateById: {
@@ -34,6 +30,7 @@ export default () => {
             return null
           },
         },
+        preresolve,
       },
       Mutations: {
         setTemplateById: {
@@ -42,6 +39,7 @@ export default () => {
             return (templates[args.id] = Object.assign(templates[args.id] || {}, args))
           },
         },
+        preresolve,
       },
     },
     prepared: {

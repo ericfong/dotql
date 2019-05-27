@@ -5,6 +5,35 @@ import serverConf from '../test/serverConf'
 
 const server = new Server(serverConf())
 
+test('preresolve', async () => {
+  const server2 = new Server(
+    serverConf({
+      preresolve: () => {
+        return {}
+      },
+    })
+  )
+  expect(
+    await server2.query({
+      templateById: {
+        $args: 'demo/new',
+        value: 1,
+      },
+    })
+  ).toMatchObject({
+    templateById: { $type: 'Template', value: { defaultTemplate: true } },
+  })
+  expect(
+    await server2.query({
+      templateById: {
+        $args: 'demo/new',
+        id: 1,
+        name: 1,
+      },
+    })
+  ).toMatchObject({ templateById: { $type: 'Template', id: 'demo/new', name: 'new' } })
+})
+
 test('queryNormalizeSpec', async () => {
   expect(server.queryNormalizeSpec({ $query: 'templateById', where: 'demo/new' })).toMatchObject({
     $query: 'templateById',

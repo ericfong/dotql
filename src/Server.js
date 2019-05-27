@@ -30,6 +30,8 @@ const loopFieldResult = async (result, fieldType, func) => {
   return func(result, fieldType)
 }
 
+const defaultPreresolve = dot => dot
+
 export default class Server {
   // conf props: getETag, setETag, calcQueryChannel, calcDotChannel
 
@@ -59,10 +61,14 @@ export default class Server {
     return result
   }
 
-  async resolveDot(dot, specs, context) {
-    const typename = dot.$type
+  async resolveDot(input, specs, context) {
+    const typename = input.$type
     const Type = this.schema[typename]
     if (DEV) invariant(Type, `Type "${typename}" is missing in schema`)
+
+    const preresolve = Type.preresolve || defaultPreresolve
+    const output = preresolve.call(this, input, context)
+    output.$type = typename
 
     // sub-fields
     await Promise.all(
@@ -76,26 +82,26 @@ export default class Server {
         const field = Type[fieldName]
         const resolve = field && field.resolve
 
-        if (DEV) invariant(resolve || fieldName in dot, `Cannot resolve ${fieldName} from type ${typename}`)
+        if (DEV) invariant(resolve || fieldName in input, `Cannot resolve ${fieldName} from type ${typename}`)
 
         // resolveField
         const outputValue = resolve
-          ? await this.resolveField(dot, spec[ARGUMENTS_KEY], context, {
+          ? await this.resolveField(input, spec[ARGUMENTS_KEY], context, {
             field,
             fieldName,
             outputKey,
-            resolveOthers: (q, _dot = dot) => this.resolveDot(_dot, q, context),
+            resolveOthers: (q, _dot = input) => this.resolveDot(_dot, q, context),
           })
-          : dot[fieldName]
+          : input[fieldName]
 
-        dot[outputKey] = await loopFieldResult(outputValue, field && field.type, (item, subTypename) => {
+        output[outputKey] = await loopFieldResult(outputValue, field && field.type, (item, subTypename) => {
           if (PRIMITIVE_TYPES[subTypename]) return item
           item.$type = subTypename
           return this.resolveDot(item, spec, context)
         })
       })
     )
-    return dot
+    return output
   }
 
   // ----------------------------------------------------------------------------------------------
