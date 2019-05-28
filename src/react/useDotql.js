@@ -1,5 +1,5 @@
 import _ from 'lodash'
-import { createElement } from 'react'
+import { createElement, useMemo } from 'react'
 
 import { RxMapContext, RxMapProvider, useRxMap, useWatch } from './useRxMap'
 
@@ -22,9 +22,10 @@ const fitOne = result => {
 
 export const useOne = (spec, option) => fitOne(useWatch(spec, option).data)
 
-export const useMutate = () => {
-  const map = useRxMap()
-  return (spec, option) => {
-    return map.mutate(spec, option).then(result => fitOne(result))
-  }
+export const useMutate = (func, deps) => {
+  const proxy = useRxMap()
+  return useMemo(() => {
+    const mutate = (spec, option) => proxy.mutate(spec, option).then(result => fitOne(result))
+    return func ? (...args) => func(mutate, ...args) : mutate
+  }, deps)
 }
