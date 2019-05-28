@@ -33,7 +33,7 @@ const loopFieldResult = async (result, fieldType, func) => {
 const defaultPreresolve = dot => dot
 
 export default class Server {
-  // conf props: getETag, setETag, calcQueryChannel, calcDotChannel
+  // conf props: schema, getETag, setETag, calcQueryChannel, calcDotChannel, validationRules
 
   constructor(conf) {
     this.prepared = {}
@@ -139,6 +139,9 @@ export default class Server {
     // context.eTags is filled by this.resolve
     const returnResult = result => (hasHeader ? { result, eTags: context.eTags } : result)
     const { spec, notMatch } = hasHeader ? _body : { spec: _body }
+
+    // check no exception validationRules for queryMaxDepth, disableAdHocQuery, disableIntrospection,
+    _.forEach(this.validationRules, rule => rule(spec))
 
     const shouldRun = await this.notMatchETags(notMatch)
     if (!shouldRun) {
