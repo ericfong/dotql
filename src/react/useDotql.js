@@ -22,7 +22,7 @@ const fitOne = result => {
 
 export const useOne = (spec, option) => fitOne(useWatch(spec, option).data)
 
-export const useMutate = (func, deps) => {
+export const useMutate = (func, deps = []) => {
   const proxy = useRxMap()
   return useMemo(() => {
     const mutate = (spec, option) => proxy.mutate(spec, option).then(result => fitOne(result))
