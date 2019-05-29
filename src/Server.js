@@ -41,7 +41,7 @@ export default class Server {
   }
 
   async resolveField(dot, fieldArgs, context, info) {
-    const { field, fieldName } = info
+    const { field } = info
 
     const isArrayType = _.isArray(field.type)
     const subTypename = isArrayType ? _.head(field.type) : field.type
