@@ -25,7 +25,7 @@ export const fitOne = result => {
 }
 
 export const createUseWatch = (useMap, { one } = {}) => {
-  let _useWatch = (args, option) => {
+  const _useWatch = (args, option) => {
     const [state, setState] = useState({ loading: true })
 
     const map = useMap()
@@ -41,10 +41,7 @@ export const createUseWatch = (useMap, { one } = {}) => {
 
     return state
   }
-  if (one) {
-    _useWatch = (args, option) => fitOne(_useWatch(args, option).data)
-  }
-  return _useWatch
+  return one ? (args, option) => fitOne(_useWatch(args, option).data) : _useWatch
 }
 
 export const useWatch = createUseWatch(useRxMap)
