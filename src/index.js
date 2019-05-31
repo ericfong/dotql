@@ -4,9 +4,9 @@ export * from './util'
 export { default as Server } from './Server'
 // export const createServer = (option, enhancers) => new (mixin(Server, enhancers))(option)
 
-// proxy
-export { default as Proxy } from './Proxy'
-// export const createProxy = (option, enhancers) => new (mixin(Proxy, enhancers))(option)
+// client
+export { default as Client } from './Client'
+// export const createClient = (option, enhancers) => new (mixin(Client, enhancers))(option)
 
 // react
 export * from './react/useDotql'

@@ -22,7 +22,7 @@ const singleAsync = (obj, key, asyncFunc) => {
   return doFunc()
 }
 
-export default class Proxy {
+export default class Client {
   // conf props: callServer, maxAge, channelsDidChange
   // ssrMode:true, .extract(), .restore(), ssr:false
 

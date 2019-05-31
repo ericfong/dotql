@@ -6,9 +6,9 @@ import { RxMapContext, RxMapProvider, useRxMap, useWatch } from './useRxMap'
 export * from './useRxMap'
 
 // rename useRxMap
-export const ProxyContext = RxMapContext
-export const ProxyProvider = ({ proxy, map, children }) => createElement(RxMapProvider, { map: proxy || map, children })
-export const useProxy = useRxMap
+export const DotqlContext = RxMapContext
+export const DotqlProvider = ({ client, children }) => createElement(RxMapProvider, { map: client, children })
+export const useDotql = useRxMap
 
 // helpers and mutation
 const isDataField = k => k[0] !== '_' && k[0] !== '$'
@@ -23,9 +23,9 @@ const fitOne = result => {
 export const useOne = (spec, option) => fitOne(useWatch(spec, option).data)
 
 export const useMutate = (func, deps = []) => {
-  const proxy = useRxMap()
+  const dotql = useDotql()
   return useMemo(() => {
-    const mutate = (spec, option) => proxy.mutate(spec, option).then(result => fitOne(result))
+    const mutate = (spec, option) => dotql.mutate(spec, option).then(result => fitOne(result))
     return func ? (...args) => func(mutate, ...args) : mutate
   }, deps)
 }

@@ -22,7 +22,7 @@ Built-in implementation for live-query (by ping or/and push)
 ### Basic Usage
 
 ```js
-dotqlProxy.query({
+dotqlClient.query({
   myUser: {
     name: 1,
     photo: 1,
@@ -45,32 +45,32 @@ graphqlClient.query(gql`
 
 ### Demo
 
-- create server and proxy
-- query, mutate and watch server data via proxy
+- create server and client
+- query, mutate and watch server data via client
 
 ```js
 const server = new Server(serverConfig)
 
-const proxy = new Proxy({
+const client = new Client({
   callServer(specs) {
     return server.query(specs)
   },
 })
 
 // query
-const promise = proxy.query({ userById: { $args: 'user_01' } })
+const promise = client.query({ userById: { $args: 'user_01' } })
 expect(await promise).toMatchObject({ userById: { $type: 'User', id: 'user_01' } })
 
 // watch
 let watchData
-const unwatch = proxy.watch({ userById: { $args: 'user_01' } }, (data, error) => {
+const unwatch = client.watch({ userById: { $args: 'user_01' } }, (data, error) => {
   watchData = data
 })
 await delay()
 expect(watchData).toMatchObject({ userById: { $type: 'User', id: 'user_01' } })
 
 // mutate
-await proxy.mutate({ setUserById: { $args: { id: 'user_01', count: 1 } } })
+await client.mutate({ setUserById: { $args: { id: 'user_01', count: 1 } } })
 await delay()
 expect(watchData).toMatchObject({ userById: { $type: 'User', id: 'user_01', count: 1 } })
 ```
@@ -79,12 +79,12 @@ use prepared queries for smaller request payload and hiding schema detail
 
 ```js
 // use prepared query 'userById_1'
-expect(await proxy.query({ $query: 'userById_1', where: 'user_01' })).toMatchObject({
+expect(await client.query({ $query: 'userById_1', where: 'user_01' })).toMatchObject({
   userById: { $type: 'User', id: 'user_01' },
 })
 
 // use prepared mutation 'setUserById_1'
-await proxy.mutate({ $mutation: 'setUserById_1', id: 'user_01', count: 2 })
+await client.mutate({ $mutation: 'setUserById_1', id: 'user_01', count: 2 })
 await delay()
 expect(watchData).toMatchObject({ userById: { $type: 'User', id: 'user_01', count: 2 } })
 ```
