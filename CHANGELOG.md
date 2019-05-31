@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.9.4](https://github.com/dotql/dotql/compare/v0.9.3...v0.9.4) (2019-05-31)
+
+
+### Bug Fixes
+
+* default useMutate deps ([40663ab](https://github.com/dotql/dotql/commit/40663ab))
+* rename Proxy to Client ([f02bafe](https://github.com/dotql/dotql/commit/f02bafe))
+
+
+
 ## [0.9.3](https://github.com/dotql/dotql/compare/v0.8.4...v0.9.3) (2019-05-29)
 
 
