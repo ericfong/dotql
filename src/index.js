@@ -7,6 +7,7 @@ export { default as Server } from './Server'
 // client
 export { default as Client } from './Client'
 // export const createClient = (option, enhancers) => new (mixin(Client, enhancers))(option)
+export { default as RxMap } from './RxMap'
 
 // react
 export * from './react/useDotql'
