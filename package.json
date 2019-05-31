@@ -1,7 +1,7 @@
 {
   "name": "dotql",
   "description": "graphql like but query by plain json. No more DSL or AST parsing",
-  "version": "0.9.4",
+  "version": "0.9.5",
   "license": "MIT",
   "main": "build/node/index.js",
   "browser": "build/browser/index.js",

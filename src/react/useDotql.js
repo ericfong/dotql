@@ -1,7 +1,7 @@
 import _ from 'lodash'
 import { createElement, useMemo } from 'react'
 
-import { RxMapContext, RxMapProvider, useRxMap, useWatch } from './useRxMap'
+import { RxMapContext, RxMapProvider, useRxMap, createUseWatch, fitOne } from './useRxMap'
 
 export * from './useRxMap'
 
@@ -11,16 +11,8 @@ export const DotqlProvider = ({ client, children }) => createElement(RxMapProvid
 export const useDotql = useRxMap
 
 // helpers and mutation
-const isDataField = k => k[0] !== '_' && k[0] !== '$'
-const fitOne = result => {
-  if (!result) return result
-  const keys = _.keys(result)
-  const headKey = _.find(keys, isDataField)
-  const lastKey = _.findLast(keys, isDataField)
-  return headKey === lastKey ? result[headKey] : result
-}
 
-export const useOne = (spec, option) => fitOne(useWatch(spec, option).data)
+export const useOne = createUseWatch(useRxMap, { one: true })
 
 export const useMutate = (func, deps = []) => {
   const dotql = useDotql()
