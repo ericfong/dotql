@@ -1,4 +1,5 @@
 export * from './util'
+export { default as fetchJson } from './fetchJson'
 
 // server
 export { default as Server } from './Server'
