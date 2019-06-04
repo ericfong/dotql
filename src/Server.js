@@ -120,7 +120,9 @@ export default class Server {
             return spec[value.$ref]
           }
           if (value.$refs) {
-            return _.pick(spec, value.$refs)
+            if (_.isArray(value.$refs)) return _.pick(spec, value.$refs)
+            // if object
+            return _.mapValues(value.$refs, specKey => spec[specKey])
           }
         }
         return undefined

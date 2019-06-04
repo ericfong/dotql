@@ -45,7 +45,7 @@ const serverConfig = {
     },
     Mutations: {
       setUserById_1: {
-        setUserById: { $args: { $refs: ['id', 'count'] } },
+        setUserById: { $args: { $refs: { id: 'userId', count: 'count' } } },
       },
     },
   },
@@ -91,7 +91,7 @@ test('kitchen sink', async () => {
   })
 
   // use prepared mutation 'setUserById_1'
-  await client.mutate({ $mutation: 'setUserById_1', id: 'user_01', count: 2 })
+  await client.mutate({ $mutation: 'setUserById_1', userId: 'user_01', count: 2 })
   await delay()
   expect(watchData).toMatchObject({ userById: { $type: 'User', id: 'user_01', count: 2 } })
 
