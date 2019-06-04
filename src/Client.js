@@ -162,7 +162,7 @@ export default class Client {
       else option.resolve(res.result)
       delete option.resolve
       delete option.reject
-    } else {
+    } else if (res.error || res.result) {
       // no resolve means no direct query(), it is from watching
       const p = res.error ? Promise.reject(res.error) : Promise.resolve(res.result)
       this.setCache(key, p, option)

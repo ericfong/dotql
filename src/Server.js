@@ -138,8 +138,6 @@ export default class Server {
   // two main entry point for end-user
   async get(_body, context = {}) {
     const hasHeader = _body?.spec
-    // context.eTags is filled by this.resolve
-    const returnResult = result => (hasHeader ? { result, eTags: context.eTags } : result)
     const { spec, notMatch } = hasHeader ? _body : { spec: _body }
 
     // check no exception validationRules for queryMaxDepth, disableAdHocQuery, disableIntrospection,
@@ -148,14 +146,15 @@ export default class Server {
     const shouldRun = await this.notMatchETags(notMatch)
     if (!shouldRun) {
       // return eTags = undefined means no change
-      return returnResult(undefined)
+      return hasHeader ? { result: undefined, eTags: undefined } : undefined
     }
 
     const normSpec = this.queryNormalizeSpec(spec)
     const isMutation = (context.isMutation = spec.$mutation)
     const dot = { $type: isMutation ? MUTATIONS_TYPE : QUERIES_TYPE }
+    // resolveDot will fill context.eTags
     const result = await this.resolveDot(dot, normSpec, context)
-    return returnResult(result)
+    return hasHeader ? { result, eTags: context.eTags } : result
   }
 
   // ----------------------------------------------------------------------------------------------
@@ -200,7 +199,7 @@ export default class Server {
 
   query(body, context = {}) {
     if (Array.isArray(body)) {
-      return promiseMapSeries(body, eachBody => this.get(eachBody, context))
+      return promiseMapSeries(body, eachBody => this.get(eachBody, { ...context }))
     }
     return this.get(body, context)
   }
