@@ -8,9 +8,7 @@ const server = new Server(serverConf())
 test('preresolve', async () => {
   const server2 = new Server(
     serverConf({
-      preresolve: () => {
-        return {}
-      },
+      preresolve: dot => dot,
     })
   )
   expect(
@@ -27,8 +25,6 @@ test('preresolve', async () => {
     await server2.query({
       templateById: {
         $args: 'demo/new',
-        id: 1,
-        name: 1,
       },
     })
   ).toMatchObject({ templateById: { $type: 'Template', id: 'demo/new', name: 'new' } })
