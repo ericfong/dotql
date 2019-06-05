@@ -29,6 +29,8 @@ const serverConfig = {
       },
     },
     User: {
+      id: { type: 'String' },
+      count: { type: 'Int' },
       role: {
         type: 'Object',
         resolve: async (dot, args, context, info) => 'Admin_Role',
@@ -40,7 +42,7 @@ const serverConfig = {
       // prepared query with name='userById_1'
       userById_1: {
         // { $ref: 'where' } will be replace by prepared query references
-        userById: { $args: { $ref: 'where' } },
+        userById: { $args: { $ref: 'where' }, id: 1, count: 1 },
       },
     },
     Mutations: {
@@ -65,20 +67,20 @@ test('kitchen sink', async () => {
   })
 
   // query
-  const promise = client.query({ userById: { $args: 'user_01' } })
+  const promise = client.query({ userById: { $args: 'user_01', id: 1 } })
   expect(await promise).toMatchObject({ userById: { $type: 'User', id: 'user_01' } })
 
   // watch
   let watchData
-  const unwatch = client.watch({ userById: { $args: 'user_01' } }, (data, error) => {
+  const unwatch = client.watch({ userById: { $args: 'user_01', id: 1, count: 1 } }, (data, error) => {
     watchData = data
   })
-  await delay()
+  await delay(10)
   expect(watchData).toMatchObject({ userById: { $type: 'User', id: 'user_01' } })
 
   // mutate
   await client.mutate({ setUserById: { $args: { id: 'user_01', count: 1 } } })
-  await delay()
+  await delay(10)
   expect(watchData).toMatchObject({ userById: { $type: 'User', id: 'user_01', count: 1 } })
 
   // DEMO 1 END

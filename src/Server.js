@@ -30,7 +30,7 @@ const loopFieldResult = async (result, fieldType, func) => {
   return func(result, fieldType)
 }
 
-const defaultPreresolve = dot => dot
+const defaultPreresolve = () => ({})
 
 export default class Server {
   // conf props: schema, getETag, setETag, calcQueryChannel, calcDotChannel, validationRules
@@ -51,7 +51,7 @@ export default class Server {
       await this.dependETagKey(context, subTypename, fieldArgs)
     }
 
-    const result = field.resolve.call(this, dot, fieldArgs, context, info)
+    const result = field.resolve(dot, fieldArgs, context, info)
 
     if (context.isMutation && notPrimitiveType) {
       await promiseMap(isArrayType ? result : [result], resultItem => {
@@ -67,7 +67,7 @@ export default class Server {
     if (DEV) invariant(Type, `Type "${typename}" is missing in schema`)
 
     const preresolve = Type.preresolve || defaultPreresolve
-    const output = preresolve.call(this, input, context)
+    const output = preresolve(input, context)
     output.$type = typename
 
     // sub-fields
@@ -82,15 +82,12 @@ export default class Server {
         const field = Type[fieldName]
         const resolve = field && field.resolve
 
-        if (DEV) invariant(resolve || fieldName in input, `Cannot resolve ${fieldName} from type ${typename}`)
-
         // resolveField
         const outputValue = resolve
           ? await this.resolveField(input, spec[ARGUMENTS_KEY], context, {
             field,
             fieldName,
             outputKey,
-            resolveOthers: (q, _dot = input) => this.resolveDot(_dot, q, context),
           })
           : input[fieldName]
 
@@ -99,8 +96,10 @@ export default class Server {
           item.$type = subTypename
           return this.resolveDot(item, spec, context)
         })
+        // console.log(output, outputKey)
       })
     )
+    // console.log('FINAL', output)
     return output
   }
 

@@ -1,22 +1,25 @@
 import _ from 'lodash'
 
+const ensureFields = template => {
+  if (template.id && !template.name) {
+    const [projectId, name] = template.id.split('/')
+    template.projectId = projectId
+    template.name = name
+  }
+  return template
+}
+
 export default ({ preresolve } = {}) => {
   const templates = {}
   return {
     schema: {
       Template: {
-        projectId: {
-          type: 'String',
-          resolve: dot => dot.projectId || dot.id.split('/')[0],
-        },
-        name: {
-          type: 'String',
-          resolve: dot => dot.name || dot.id.split('/')[1],
-        },
+        projectId: { type: 'String' },
+        name: { type: 'String' },
         value: {
           type: 'Object',
-          async resolve(_dot, args, ctx, info) {
-            const dot = await info.resolveOthers({ projectId: 1, name: 1 })
+          async resolve(_dot) {
+            const dot = ensureFields(_dot)
             return dot.projectId === 'demo' && dot.name === 'new' ? { defaultTemplate: true } : JSON.parse(dot.json)
           },
         },
@@ -26,7 +29,9 @@ export default ({ preresolve } = {}) => {
         templateById: {
           type: 'Template',
           resolve(dot, where) {
-            if (_.isString(where)) return { ...templates[where], id: where }
+            if (_.isString(where)) {
+              return ensureFields({ ...templates[where], id: where })
+            }
             return null
           },
         },
@@ -44,10 +49,10 @@ export default ({ preresolve } = {}) => {
     },
     prepared: {
       Queries: {
-        templateById: { templateById: { $args: { $ref: 'where' } } },
+        templateById: { templateById: { $args: { $ref: 'where' }, id: 1 } },
       },
       Mutations: {
-        setTemplateById: { setTemplateById: { $args: { $ref: 'args' } } },
+        setTemplateById: { setTemplateById: { $args: { $ref: 'args' }, id: 1 } },
       },
     },
   }

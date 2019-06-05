@@ -59,6 +59,8 @@ test('Mutations', async () => {
       setTemplateById: {
         $args: { id: 'demo/new', count: 1 },
         value: 1,
+        id: 1,
+        count: 1,
       },
     })
   ).toMatchObject({ $type: 'Mutations', setTemplateById: { $type: 'Template', count: 1, id: 'demo/new' } })
@@ -70,39 +72,10 @@ test('Queries', async () => {
       templateById: {
         $args: 'demo/new',
         value: 1,
+        id: 1,
       },
     })
   ).toMatchObject({
     templateById: { $type: 'Template', id: 'demo/new', value: { defaultTemplate: true } },
   })
-})
-
-test('resolveDot', async () => {
-  expect(
-    await server.resolveDot(
-      {
-        $type: 'Template',
-        id: 'demo/new',
-      },
-      {
-        value: 1,
-      },
-      {}
-    )
-  ).toMatchObject({
-    value: { defaultTemplate: true },
-  })
-  expect(
-    await server.resolveDot(
-      {
-        $type: 'Template',
-        id: 'demo/new2',
-        json: '{"x":1}',
-      },
-      {
-        value: 1,
-      },
-      {}
-    )
-  ).toMatchObject({ value: { x: 1 } })
 })
