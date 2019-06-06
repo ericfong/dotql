@@ -1,19 +1,20 @@
-/* eslint-disable no-unused-vars */
+/* eslint-disable prefer-const, no-unused-vars */
 import _ from 'lodash'
-import delay from 'delay'
-import Client from './Client'
+import _delay from 'delay'
 
-import Server from './Server'
+import { Server, Client } from '.'
 import serverConf from '../test/serverConf'
+
+const delay = (time = 10) => _delay(time)
 
 const userDb = {}
 
-// DEMO 3 START
+// DEMO-03 serverConfig
 
-const serverConfig = {
+const server = new Server({
   schema: {
     Queries: {
-      userById: {
+      getUserById: {
         type: 'User',
         resolve: async (dot, args, context, info) => {
           return { ...userDb[args], id: args }
@@ -31,73 +32,82 @@ const serverConfig = {
     User: {
       id: { type: 'String' },
       count: { type: 'Int' },
-      role: {
-        type: 'Object',
-        resolve: async (dot, args, context, info) => 'Admin_Role',
+      blogs: {
+        type: ['Object'],
+        resolve: async (dot, args, context, info) => {
+          // batch.load() will auto create new DataLoader(batchLoader)
+          const blogId = await context.batch.load(dot.id)
+          return [{ blogId }]
+        },
+        batchLoader: async keys => _.map(keys, k => `< ${k} >`),
       },
     },
   },
   prepared: {
     Queries: {
-      // prepared query with name='userById_1'
-      userById_1: {
+      // prepared query with name='getUserById_1'
+      getUserById_1: {
         // { $ref: 'where' } will be replace by prepared query references
-        userById: { $args: { $ref: 'where' }, id: 1, count: 1 },
+        getUserById: { $args: { $ref: 'where' }, id: 1, count: 1 },
       },
     },
     Mutations: {
       setUserById_1: {
+        // $refs will pick multiple variables
         setUserById: { $args: { $refs: { id: 'userId', count: 'count' } } },
       },
     },
   },
-}
+})
 
-// DEMO 3 END
+// END
 
 test('kitchen sink', async () => {
-  // DEMO 1 START
+  let result
+  let watchData
 
-  const server = new Server(serverConfig)
+  // DEMO-01 basic
 
   const client = new Client({
-    callServer(specs) {
-      return server.query(specs)
-    },
+    callServer: specs => server.query(specs),
   })
-
-  // query
-  const promise = client.query({ userById: { $args: 'user_01', id: 1 } })
-  expect(await promise).toMatchObject({ userById: { $type: 'User', id: 'user_01' } })
 
   // watch
-  let watchData
-  const unwatch = client.watch({ userById: { $args: 'user_01', id: 1, count: 1 } }, (data, error) => {
+  const unwatch = client.watch({ getUserById: { $args: 'user_01', id: 1, count: 1 } }, (data, error) => {
     watchData = data
   })
-  await delay(10)
-  expect(watchData).toMatchObject({ userById: { $type: 'User', id: 'user_01' } })
+  await delay()
+  // watch will fill initial data
+  expect(watchData).toMatchObject({ getUserById: { $type: 'User', id: 'user_01', count: undefined } })
 
   // mutate
-  await client.mutate({ setUserById: { $args: { id: 'user_01', count: 1 } } })
-  await delay(10)
-  expect(watchData).toMatchObject({ userById: { $type: 'User', id: 'user_01', count: 1 } })
+  await client.mutate({ setUserById: { $args: { id: 'user_01', count: 10 } } })
+  await delay()
+  expect(watchData).toMatchObject({ getUserById: { $type: 'User', id: 'user_01', count: 10 } })
 
-  // DEMO 1 END
+  // END
 
-  // DEMO 2 START
+  // DEMO-02 prepared query
 
-  // use prepared query 'userById_1'
-  expect(await client.query({ $query: 'userById_1', where: 'user_01' })).toMatchObject({
-    userById: { $type: 'User', id: 'user_01' },
+  // use prepared query 'getUserById_1'
+  expect(await client.query({ $query: 'getUserById_1', where: 'user_01' })).toMatchObject({
+    getUserById: { $type: 'User', id: 'user_01' },
   })
 
   // use prepared mutation 'setUserById_1'
-  await client.mutate({ $mutation: 'setUserById_1', userId: 'user_01', count: 2 })
+  await client.mutate({ $mutation: 'setUserById_1', userId: 'user_01', count: 20 })
   await delay()
-  expect(watchData).toMatchObject({ userById: { $type: 'User', id: 'user_01', count: 2 } })
+  expect(watchData).toMatchObject({ getUserById: { $type: 'User', id: 'user_01', count: 20 } })
 
-  // DEMO 2 END
+  // END
+
+  // DEMO-04 batchLoader
+
+  // resolve via batchLoader
+  result = await client.query({ getUserById: { $args: 'user_01', blogs: 1 } })
+  expect(result).toMatchObject({ getUserById: { $type: 'User', blogs: [{ blogId: '< user_01 >' }] } })
+
+  // END
 
   // react useOne
   // react useMutate

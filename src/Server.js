@@ -1,5 +1,6 @@
 import invariant from 'invariant'
 import _ from 'lodash'
+import DataLoader from 'dataloader'
 
 import { promiseMapSeries, promiseMap } from './util'
 
@@ -23,7 +24,7 @@ const loopFieldResult = async (result, fieldType, func) => {
   const isArrayType = _.isArray(fieldType)
   if (isArrayType) {
     const subTypename = _.head(fieldType)
-    return promiseMap(result, item => {
+    return promiseMap(_.isArray(result) ? result : [result], item => {
       return func(item, subTypename)
     })
   }
@@ -41,7 +42,7 @@ export default class Server {
   }
 
   async resolveField(dot, fieldArgs, context, info) {
-    const { field } = info
+    const { field, typename, fieldName } = info
 
     const isArrayType = _.isArray(field.type)
     const subTypename = isArrayType ? _.head(field.type) : field.type
@@ -49,6 +50,16 @@ export default class Server {
 
     if (!context.isMutation && notPrimitiveType) {
       await this.dependETagKey(context, subTypename, fieldArgs)
+    }
+
+    const { batch } = context
+    batch.load = key => {
+      const loaderName = `_${typename}.${fieldName}`
+      if (!batch[loaderName]) {
+        if (DEV) invariant(field.batchLoader, `batchLoader is missing in field "${typename}.${fieldName}"`)
+        batch[loaderName] = new DataLoader(field.batchLoader)
+      }
+      return batch[loaderName].load(key)
     }
 
     const result = field.resolve(dot, fieldArgs, context, info)
@@ -85,18 +96,21 @@ export default class Server {
         // resolveField
         const outputValue = resolve
           ? await this.resolveField(input, spec[ARGUMENTS_KEY], context, {
+            typename,
             field,
             fieldName,
             outputKey,
           })
           : input[fieldName]
+        // console.log('>>A', fieldName, outputValue)
 
         output[outputKey] = await loopFieldResult(outputValue, field && field.type, (item, subTypename) => {
+          // console.log('>>C', item, subTypename)
           if (PRIMITIVE_TYPES[subTypename]) return item
           item.$type = subTypename
           return this.resolveDot(item, spec, context)
         })
-        // console.log(output, outputKey)
+        // console.log('>>B', outputKey, fieldName, output[outputKey])
       })
     )
     // console.log('FINAL', output)
@@ -187,20 +201,25 @@ export default class Server {
 
   async notMatchETags(oldETags) {
     if (!oldETags) return true
-    // TODO how to handle oldETags === {}
     const bools = await Promise.all(
       _.map(oldETags, async (oldETag, key) => {
         return (await this.getETag(key)) !== oldETag
       })
     )
+    // if oldETags === {}, consider as match, will return false
     return _.some(bools, Boolean)
   }
 
   query(body, context = {}) {
+    this.setupQueryContext(context)
     if (Array.isArray(body)) {
       return promiseMapSeries(body, eachBody => this.get(eachBody, { ...context }))
     }
     return this.get(body, context)
+  }
+
+  setupQueryContext(context) {
+    context.batch = {}
   }
 }
 

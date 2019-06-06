@@ -21,21 +21,26 @@ Built-in implementation for live-query (by ping or/and push)
 
 ### Basic Usage
 
+dotql query
+
 ```js
-dotqlClient.query({
-  myUser: {
+client.query({
+  getUserById: {
+    // with id:'user_01' arguments
+    $args: { id: 'user_01' },
+    // ask for name and photo fields
     name: 1,
     photo: 1,
   },
 })
 ```
 
-instead of
+instead of graphql query
 
 ```js
 graphqlClient.query(gql`
   {
-    myUser {
+    getUserById(id: "user_01") {
       name
       photo
     }
@@ -43,50 +48,100 @@ graphqlClient.query(gql`
 `)
 ```
 
-### Demo
-
-- create server and client
-- query, mutate and watch server data via client
+mutate and watch server data via client
 
 ```js
-const server = new Server(serverConfig)
-
 const client = new Client({
-  callServer(specs) {
-    return server.query(specs)
-  },
+  callServer: specs => server.query(specs),
 })
 
-// query
-const promise = client.query({ userById: { $args: 'user_01' } })
-expect(await promise).toMatchObject({ userById: { $type: 'User', id: 'user_01' } })
-
 // watch
-let watchData
-const unwatch = client.watch({ userById: { $args: 'user_01' } }, (data, error) => {
+const unwatch = client.watch({ getUserById: { $args: 'user_01', id: 1, count: 1 } }, (data, error) => {
   watchData = data
 })
 await delay()
-expect(watchData).toMatchObject({ userById: { $type: 'User', id: 'user_01' } })
+// watch will fill initial data
+expect(watchData).toMatchObject({ getUserById: { $type: 'User', id: 'user_01', count: undefined } })
 
 // mutate
-await client.mutate({ setUserById: { $args: { id: 'user_01', count: 1 } } })
+await client.mutate({ setUserById: { $args: { id: 'user_01', count: 10 } } })
 await delay()
-expect(watchData).toMatchObject({ userById: { $type: 'User', id: 'user_01', count: 1 } })
+expect(watchData).toMatchObject({ getUserById: { $type: 'User', id: 'user_01', count: 10 } })
 ```
 
 use prepared queries for smaller request payload and hiding schema detail
 
 ```js
-// use prepared query 'userById_1'
-expect(await client.query({ $query: 'userById_1', where: 'user_01' })).toMatchObject({
-  userById: { $type: 'User', id: 'user_01' },
+// use prepared query 'getUserById_1'
+expect(await client.query({ $query: 'getUserById_1', where: 'user_01' })).toMatchObject({
+  getUserById: { $type: 'User', id: 'user_01' },
 })
 
 // use prepared mutation 'setUserById_1'
-await client.mutate({ $mutation: 'setUserById_1', id: 'user_01', count: 2 })
+await client.mutate({ $mutation: 'setUserById_1', userId: 'user_01', count: 20 })
 await delay()
-expect(watchData).toMatchObject({ userById: { $type: 'User', id: 'user_01', count: 2 } })
+expect(watchData).toMatchObject({ getUserById: { $type: 'User', id: 'user_01', count: 20 } })
+```
+
+create server instance
+
+```js
+const server = new Server({
+  schema: {
+    Queries: {
+      getUserById: {
+        type: 'User',
+        resolve: async (dot, args, context, info) => {
+          return { ...userDb[args], id: args }
+        },
+      },
+    },
+    Mutations: {
+      setUserById: {
+        type: 'User',
+        resolve: async (dot, args, context, info) => {
+          return (userDb[args.id] = Object.assign(userDb[args.id] || {}, args))
+        },
+      },
+    },
+    User: {
+      id: { type: 'String' },
+      count: { type: 'Int' },
+      blogs: {
+        type: ['Object'],
+        resolve: async (dot, args, context, info) => {
+          // batch.load() will auto create new DataLoader(batchLoader)
+          const blogId = await context.batch.load(dot.id)
+          return [{ blogId }]
+        },
+        batchLoader: async keys => _.map(keys, k => `< ${k} >`),
+      },
+    },
+  },
+  prepared: {
+    Queries: {
+      // prepared query with name='getUserById_1'
+      getUserById_1: {
+        // { $ref: 'where' } will be replace by prepared query references
+        getUserById: { $args: { $ref: 'where' }, id: 1, count: 1 },
+      },
+    },
+    Mutations: {
+      setUserById_1: {
+        // $refs will pick multiple variables
+        setUserById: { $args: { $refs: { id: 'userId', count: 'count' } } },
+      },
+    },
+  },
+})
+```
+
+trigger resolve to call context.batch.load() which use built-in support of [dataloader](https://www.npmjs.com/package/dataloader)
+
+```js
+// resolve via batchLoader
+result = await client.query({ getUserById: { $args: 'user_01', blogs: 1 } })
+expect(result).toMatchObject({ getUserById: { $type: 'User', blogs: [{ blogId: '< user_01 >' }] } })
 ```
 
 ### Size
