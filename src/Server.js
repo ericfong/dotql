@@ -41,11 +41,13 @@ export default class Server {
     Object.assign(this, conf)
   }
 
-  async resolveField(dot, fieldArgs, context, info) {
+  async resolveField(input, fieldArgs, context, info) {
     const { field, typename, fieldName } = info
+    if (!field || !field.resolve) return input[fieldName]
+    const { type, resolve, batchLoader } = field
 
-    const isArrayType = _.isArray(field.type)
-    const subTypename = isArrayType ? _.head(field.type) : field.type
+    const isArrayType = _.isArray(type)
+    const subTypename = isArrayType ? _.head(type) : type
     const notPrimitiveType = !PRIMITIVE_TYPES[subTypename]
 
     if (!context.isMutation && notPrimitiveType) {
@@ -56,13 +58,13 @@ export default class Server {
     batch.load = key => {
       const loaderName = `_${typename}.${fieldName}`
       if (!batch[loaderName]) {
-        if (DEV) invariant(field.batchLoader, `batchLoader is missing in field "${typename}.${fieldName}"`)
-        batch[loaderName] = new DataLoader(field.batchLoader)
+        if (DEV) invariant(batchLoader, `batchLoader is missing in field "${typename}.${fieldName}"`)
+        batch[loaderName] = new DataLoader(batchLoader)
       }
       return batch[loaderName].load(key)
     }
 
-    const result = field.resolve(dot, fieldArgs, context, info)
+    const result = await resolve(input, fieldArgs, context, info)
 
     if (context.isMutation && notPrimitiveType) {
       await promiseMap(isArrayType ? result : [result], resultItem => {
@@ -78,30 +80,23 @@ export default class Server {
     if (DEV) invariant(Type, `Type "${typename}" is missing in schema`)
 
     const preresolve = Type.preresolve || defaultPreresolve
-    const output = preresolve(input, context)
+    const output = await preresolve(input, context)
     output.$type = typename
 
     // sub-fields
     await Promise.all(
       _.map(specs, async (spec, outputKey) => {
         if (OPERATORS[outputKey]) return // ignore operator
-
-        // use this type field to resolve
         const fieldName = spec.$from || outputKey
-
-        // get field & resolve
         const field = Type[fieldName]
-        const resolve = field && field.resolve
 
         // resolveField
-        const outputValue = resolve
-          ? await this.resolveField(input, spec[ARGUMENTS_KEY], context, {
-            typename,
-            field,
-            fieldName,
-            outputKey,
-          })
-          : input[fieldName]
+        const outputValue = await this.resolveField(input, spec[ARGUMENTS_KEY], context, {
+          typename,
+          field,
+          fieldName,
+          outputKey,
+        })
         // console.log('>>A', fieldName, outputValue)
 
         output[outputKey] = await loopFieldResult(outputValue, field && field.type, (item, subTypename) => {

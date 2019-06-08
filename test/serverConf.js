@@ -28,7 +28,7 @@ export default ({ preresolve } = {}) => {
       Queries: {
         templateById: {
           type: 'Template',
-          resolve(dot, where) {
+          async resolve(dot, where) {
             if (_.isString(where)) {
               return ensureFields({ ...templates[where], id: where })
             }
@@ -40,7 +40,7 @@ export default ({ preresolve } = {}) => {
       Mutations: {
         setTemplateById: {
           type: 'Template',
-          resolve(dot, args) {
+          async resolve(dot, args) {
             return (templates[args.id] = Object.assign(templates[args.id] || {}, args))
           },
         },
