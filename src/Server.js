@@ -34,7 +34,7 @@ const loopFieldResult = async (result, fieldType, func) => {
 const defaultPreresolve = () => ({})
 
 export default class Server {
-  // conf props: schema, getETag, setETag, calcQueryChannel, calcDotChannel, validationRules
+  // conf props: schema, getETag, setETag, calcQueryChannel, calcDotChannel, validationRules, onEachContext
 
   constructor(conf) {
     this.prepared = {}
@@ -143,8 +143,8 @@ export default class Server {
     return spec
   }
 
-  // two main entry point for end-user
-  async get(_body, context = {}) {
+  async queryOne(_body, context) {
+    if (this.onEachContext) this.onEachContext(context)
     const hasHeader = _body?.spec
     const { spec, notMatch } = hasHeader ? _body : { spec: _body }
 
@@ -165,7 +165,17 @@ export default class Server {
     return hasHeader ? { result, eTags: context.eTags } : result
   }
 
+  // the only main entry point for end-user
+  query(body, context = {}) {
+    context.batch = {}
+    if (Array.isArray(body)) {
+      return promiseMapSeries(body, eachBody => this.queryOne(eachBody, { ...context }))
+    }
+    return this.queryOne(body, context)
+  }
+
   // ----------------------------------------------------------------------------------------------
+  // eTags, notMatch related
 
   getETag(channel) {
     return _.get(this, ['_etags', channel], null)
@@ -204,23 +214,4 @@ export default class Server {
     // if oldETags === {}, consider as match, will return false
     return _.some(bools, Boolean)
   }
-
-  query(body, context = {}) {
-    this.setupQueryContext(context)
-    if (Array.isArray(body)) {
-      return promiseMapSeries(body, eachBody => this.get(eachBody, { ...context }))
-    }
-    return this.get(body, context)
-  }
-
-  setupQueryContext(context) {
-    context.batch = {}
-  }
 }
-
-/*
-Call Sequence
-- query
-- get
-- resolve
-*/
