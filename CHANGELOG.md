@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.9.9](https://github.com/dotql/dotql/compare/v0.9.4...v0.9.9) (2019-06-10)
+
+
+### Bug Fixes
+
+* $refs support object ([32d5643](https://github.com/dotql/dotql/commit/32d5643))
+* add onEachContext ([41a797c](https://github.com/dotql/dotql/commit/41a797c))
+* await resolve ([a704281](https://github.com/dotql/dotql/commit/a704281))
+* createUseWatch ([22d28e8](https://github.com/dotql/dotql/commit/22d28e8))
+* export RxMap ([49095df](https://github.com/dotql/dotql/commit/49095df))
+* preresolve test ([a8aa76d](https://github.com/dotql/dotql/commit/a8aa76d))
+* query but nothing have changed ([e45f8b7](https://github.com/dotql/dotql/commit/e45f8b7))
+* recursive call ([be4b280](https://github.com/dotql/dotql/commit/be4b280))
+* refactor fetchJson ([b9ce83b](https://github.com/dotql/dotql/commit/b9ce83b))
+* remove resolveOthers; .call(this); explicit spec fields ([24783c2](https://github.com/dotql/dotql/commit/24783c2))
+* support dataloader ([1d45258](https://github.com/dotql/dotql/commit/1d45258))
+
+
+
 <a name="0.9.8"></a>
 ## [0.9.8](https://github.com/dotql/dotql/compare/v0.9.4...v0.9.8) (2019-06-07)
 
