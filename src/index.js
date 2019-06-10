@@ -11,4 +11,4 @@ export { default as Client } from './Client'
 export { default as RxMap } from './RxMap'
 
 // react
-export * from './react/useDotql'
+export * from './reactHooks'

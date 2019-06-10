@@ -93,15 +93,20 @@ export default class Client {
   // end-user-entry-point
   watch(spec, onNext, option = {}) {
     const key = this.toKey(spec, option)
-    const hitCache = this.map.has(key)
+    // emit cache data or error
+    const hasCache = this.map.has(key)
     const p = this.query(spec, option)
-    if (hitCache) Promise.resolve(p).then(onNext)
-    // listen
-    this.map.setMeta(key, { watchCount: (this.map.getMeta(key, 'watchCount') || 0) + 1, spec, option })
+    if (hasCache) {
+      Promise.resolve(p)
+        .then(onNext)
+        .catch(err => onNext(undefined, err))
+    }
+    // listen future
+    this.map.setMeta(key, { watchCount: this.map.getMeta(key, 'watchCount', 0) + 1, spec, option })
     const removeListener = this.map.listen(key, onNext)
     return () => {
       removeListener()
-      this.map.setMeta(key, { watchCount: this.map.getMeta(key, 'watchCount') - 1 })
+      this.map.setMeta(key, { watchCount: this.map.getMeta(key, 'watchCount', 0) - 1 })
     }
   }
 

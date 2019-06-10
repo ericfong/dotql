@@ -72,7 +72,7 @@ export default class RxMap extends Map {
 
   getMeta(key, path, defaultValue) {
     const meta = this.metas.get(key)
-    return path ? _.get(meta, path, defaultValue) : meta
+    return path ? _.get(meta, path, defaultValue) : meta || defaultValue
   }
 
   setMeta(key, values) {
