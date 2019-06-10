@@ -101,7 +101,7 @@ export default class Client {
     const removeListener = this.map.listen(key, onNext)
     return () => {
       removeListener()
-      --this.map.getMeta(key).watchCount
+      this.map.setMeta(key, { watchCount: this.map.getMeta(key, 'watchCount') - 1 })
     }
   }
 
@@ -129,7 +129,10 @@ export default class Client {
     return singleAsync(this, '_batchFlushPromise', async () => {
       const { batchings } = this
       this.batchings = []
-      const restMetas = { ...this.map.getMetas() }
+      const restMetas = {}
+      this.map.metas.forEach((meta, key) => {
+        restMetas[key] = meta
+      })
 
       const batchArr = []
       const batchOptions = []
@@ -177,13 +180,10 @@ export default class Client {
 
   emitChannelsDidChange() {
     if (this.channelsDidChange) {
-      const newETags = _.transform(
-        this.map.getMetas(),
-        (acc, meta) => {
-          _.assign(acc, meta.eTags)
-        },
-        {}
-      )
+      const newETags = {}
+      this.map.metas.forEach(meta => {
+        _.assign(newETags, meta.eTags)
+      })
       this.eTags = this.channelsDidChange(newETags, this.eTags || {}) || newETags
     }
   }

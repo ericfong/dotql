@@ -9,7 +9,7 @@ export default class RxMap extends Map {
   constructor(iterable) {
     super(iterable)
     this.emitter = new EventEmitter()
-    this.metas = {}
+    this.metas = new Map()
   }
 
   watch(key, onNext) {
@@ -35,7 +35,7 @@ export default class RxMap extends Map {
     if (hasDel) {
       this.emit(key, undefined)
     }
-    delete this.metas[key]
+    this.metas.delete(key)
     return hasDel
   }
 
@@ -45,7 +45,7 @@ export default class RxMap extends Map {
     emitter.eventNames().forEach(key => {
       emitter.emit(key, undefined)
     })
-    this.metas = {}
+    this.metas.clear()
   }
 
   emit(key, value) {
@@ -63,20 +63,22 @@ export default class RxMap extends Map {
   // metas
 
   getMetas() {
-    return this.metas
+    const keyValues = {}
+    this.metas.forEach((meta, key) => {
+      keyValues[key] = meta
+    })
+    return keyValues
   }
 
-  getMeta(...args) {
-    return _.get(this.metas, args)
+  getMeta(key, path, defaultValue) {
+    const meta = this.metas.get(key)
+    return path ? _.get(meta, path, defaultValue) : meta
   }
 
   setMeta(key, values) {
     // if (!this.has(key)) return undefined
     if (DEV) invariant(this.has(key), `setMeta(${key}) which do not have main value`)
-    return (this.metas[key] = Object.assign(this.metas[key] || {}, values))
+    const newMeta = _.assign(this.metas.get(key) || {}, values)
+    this.metas.set(key, newMeta)
   }
-
-  // updateMeta(key, values) {
-  //   return Object.assign(this.metas[key], values)
-  // }
 }

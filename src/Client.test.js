@@ -10,18 +10,16 @@ test('watching', async () => {
   const client = new Client({ callServer })
   const remove1 = client.watch('A', () => {})
   const remove2 = client.watch('A', () => {})
-  expect(client.map.metas).toMatchObject({
-    A: { spec: 'A', watchCount: 2, option: { key: 'A' } },
-  })
+  expect([...client.map.metas]).toMatchObject([['A', { spec: 'A', watchCount: 2, option: { key: 'A' } }]])
 
   await delay()
   expect(callServer).lastCalledWith([{ spec: 'A' }], [{ key: 'A' }])
 
   const remove3 = client.watch('B', () => {})
-  expect(client.map.metas).toMatchObject({
-    A: { spec: 'A', watchCount: 2, option: { key: 'A' }, eTags: { k1: 'A-eTag' } },
-    B: { spec: 'B', watchCount: 1, option: { key: 'B' } },
-  })
+  expect([...client.map.metas]).toMatchObject([
+    ['A', { spec: 'A', watchCount: 2, option: { key: 'A' }, eTags: { k1: 'A-eTag' } }],
+    ['B', { spec: 'B', watchCount: 1, option: { key: 'B' } }],
+  ])
 
   await delay()
   expect(callServer).lastCalledWith([{ spec: 'B' }, { spec: 'A', notMatch: { k1: 'A-eTag' } }], [{ key: 'B' }, { key: 'A' }])
@@ -35,10 +33,10 @@ test('watching', async () => {
   remove1()
   remove2()
   remove3()
-  expect(client.map.metas).toMatchObject({
-    A: { spec: 'A', watchCount: 0, eTags: { k1: 'A-eTag' } },
-    B: { spec: 'B', watchCount: 0, eTags: { k1: 'B-eTag' } },
-  })
+  expect([...client.map.metas]).toMatchObject([
+    ['A', { spec: 'A', watchCount: 0, eTags: { k1: 'A-eTag' } }],
+    ['B', { spec: 'B', watchCount: 0, eTags: { k1: 'B-eTag' } }],
+  ])
 })
 
 test('batch', async () => {
