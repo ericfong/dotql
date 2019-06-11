@@ -5,6 +5,16 @@ import isPromise from 'p-is-promise'
 
 const DEV = process.env.NODE_ENV !== 'production'
 
+export const firstEmit = (host, key, onNext, getFunc) => {
+  const has = host.has(key)
+  const p = getFunc()
+  if (has) {
+    Promise.resolve(p)
+      .then(onNext)
+      .catch(err => onNext(undefined, err))
+  }
+}
+
 export default class RxMap extends Map {
   constructor(iterable) {
     super(iterable)
@@ -13,7 +23,7 @@ export default class RxMap extends Map {
   }
 
   watch(key, onNext) {
-    Promise.resolve(this.get(key)).then(onNext)
+    firstEmit(this, key, onNext, () => this.get(key))
     return this.listen(key, onNext)
   }
 

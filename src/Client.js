@@ -1,7 +1,7 @@
 import _ from 'lodash'
 import stringify from 'fast-stable-stringify'
 
-import RxMap from './RxMap'
+import RxMap, { firstEmit } from './RxMap'
 
 const DEV = process.env.NODE_ENV !== 'production'
 
@@ -49,6 +49,10 @@ export default class Client {
     this.map.setMeta(key, { expires: typeof maxAge === 'number' ? Date.now() + maxAge : undefined })
   }
 
+  has(key) {
+    this.map.has(key)
+  }
+
   delete(key) {
     this.map.delete(key)
   }
@@ -94,13 +98,7 @@ export default class Client {
   watch(spec, onNext, option = {}) {
     const key = this.toKey(spec, option)
     // emit cache data or error
-    const hasCache = this.map.has(key)
-    const p = this.query(spec, option)
-    if (hasCache) {
-      Promise.resolve(p)
-        .then(onNext)
-        .catch(err => onNext(undefined, err))
-    }
+    firstEmit(this, key, onNext, () => this.query(spec, option))
     // listen future
     this.map.setMeta(key, { watchCount: this.map.getMeta(key, 'watchCount', 0) + 1, spec, option })
     const removeListener = this.map.listen(key, onNext)
