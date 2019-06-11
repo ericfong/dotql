@@ -50,15 +50,15 @@ export default class Client {
   }
 
   has(key) {
-    this.map.has(key)
+    return this.map.has(key)
   }
 
   delete(key) {
-    this.map.delete(key)
+    return this.map.delete(key)
   }
 
   clear() {
-    this.map.clear()
+    return this.map.clear()
   }
   /* #endregion */
 
