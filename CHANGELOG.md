@@ -2,16 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
-## [0.9.11](https://github.com/dotql/dotql/compare/v0.9.9...v0.9.11) (2019-06-12)
+<a name="0.9.12"></a>
+## [0.9.12](https://github.com/dotql/dotql/compare/v0.9.10...v0.9.12) (2019-06-12)
 
 
 ### Bug Fixes
 
 * client map functions ([f39c0a5](https://github.com/dotql/dotql/commit/f39c0a5))
 * fetchJson ([9ada8e7](https://github.com/dotql/dotql/commit/9ada8e7))
-* refactor reactHooks ([f08d1bb](https://github.com/dotql/dotql/commit/f08d1bb))
-* test ([1f6db97](https://github.com/dotql/dotql/commit/1f6db97))
-* use Map for RxMap metas ([2bf8c7a](https://github.com/dotql/dotql/commit/2bf8c7a))
 
 
 
