@@ -34,7 +34,7 @@ const loopFieldResult = async (result, fieldType, func) => {
 const defaultPreresolve = () => ({})
 
 export default class Server {
-  // conf props: schema, getETag, setETag, calcQueryChannel, calcDotChannel, validationRules, onEachContext
+  // conf props: schema, getETag, setETag, calcQueryChannel, calcDotChannel, validationRules, onEachContext, formatError
 
   constructor(conf) {
     this.prepared = {}
@@ -172,11 +172,21 @@ export default class Server {
       return promiseMapSeries(body, eachBody => {
         return this.queryOne(eachBody, { ...context }).catch(err => {
           // apollo use errors instead of error
-          return { error: err }
+          return { error: this.formatError(err) }
         })
       })
     }
     return this.queryOne(body, context)
+  }
+
+  formatError(err) {
+    return _.transform(
+      Object.getOwnPropertyNames(err),
+      (ret, k) => {
+        if (DEV || k !== 'stack') ret[k] = err[k]
+      },
+      {}
+    )
   }
 
   // ----------------------------------------------------------------------------------------------
