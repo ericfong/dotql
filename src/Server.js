@@ -154,22 +154,27 @@ export default class Server {
     const shouldRun = await this.notMatchETags(notMatch)
     if (!shouldRun) {
       // return eTags = undefined means no change
-      return hasHeader ? { result: undefined, eTags: undefined } : undefined
+      return hasHeader ? { data: undefined, eTags: undefined } : undefined
     }
 
     const normSpec = this.queryNormalizeSpec(spec)
     const isMutation = (context.isMutation = spec.$mutation)
     const dot = { $type: isMutation ? MUTATIONS_TYPE : QUERIES_TYPE }
     // resolveDot will fill context.eTags
-    const result = await this.resolveDot(dot, normSpec, context)
-    return hasHeader ? { result, eTags: context.eTags } : result
+    const data = await this.resolveDot(dot, normSpec, context)
+    return hasHeader ? { data, eTags: context.eTags } : data
   }
 
   // the only main entry point for end-user
   query(body, context = {}) {
     context.batch = {}
     if (Array.isArray(body)) {
-      return promiseMapSeries(body, eachBody => this.queryOne(eachBody, { ...context }))
+      return promiseMapSeries(body, eachBody => {
+        return this.queryOne(eachBody, { ...context }).catch(err => {
+          // apollo use errors instead of error
+          return { error: err }
+        })
+      })
     }
     return this.queryOne(body, context)
   }

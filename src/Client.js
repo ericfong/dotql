@@ -155,12 +155,12 @@ export default class Client extends RxMap {
     const { key } = option
     if (option.resolve) {
       if (res.error) option.reject(res.error)
-      else option.resolve(res.result)
+      else option.resolve(res.data)
       delete option.resolve
       delete option.reject
-    } else if (res.error || res.result) {
+    } else if (res.error || res.data) {
       // no resolve means no direct query(), it is from watching
-      const p = res.error ? Promise.reject(res.error) : Promise.resolve(res.result)
+      const p = res.error ? Promise.reject(res.error) : Promise.resolve(res.data)
       this.setCache(key, p, option)
     }
 

@@ -35,6 +35,12 @@ export default ({ preresolve } = {}) => {
             return null
           },
         },
+        throwError: {
+          type: 'Int',
+          resolve: () => {
+            throw new Error('I_AM_ERROR')
+          },
+        },
         preresolve,
       },
       Mutations: {

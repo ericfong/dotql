@@ -1,9 +1,15 @@
-// import _ from 'lodash'
+import _ from 'lodash'
 
 import Server from './Server'
 import serverConf from '../test/serverConf'
 
 const server = new Server(serverConf())
+
+test('throw Error', async () => {
+  const server2 = new Server(serverConf())
+  const ret = _.get(await server2.query([{ throwError: 1 }]), '0')
+  expect(ret).toMatchObject({ error: { message: 'I_AM_ERROR' } })
+})
 
 test('preresolve', async () => {
   const server2 = new Server(
