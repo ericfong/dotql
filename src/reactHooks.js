@@ -12,12 +12,12 @@ const getMemArr = args => {
 }
 
 const isDataField = k => k[0] !== '_' && k[0] !== '$'
-export const fitOne = result => {
-  if (!result) return result
-  const keys = _.keys(result)
+export const fitOne = data => {
+  if (!data) return data
+  const keys = _.keys(data)
   const headKey = _.find(keys, isDataField)
   const lastKey = _.findLast(keys, isDataField)
-  return headKey === lastKey ? result[headKey] : result
+  return headKey === lastKey ? data[headKey] : data
 }
 
 export const createUseWatch = (Context, { fullState, oneResult } = {}) => {

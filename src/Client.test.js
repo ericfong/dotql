@@ -5,7 +5,7 @@ import Client from './Client'
 
 test('watching', async () => {
   const callServer = jest.fn(req => {
-    return req.map(w => ({ result: w.spec, eTags: { k1: `${w.spec}-eTag` } }))
+    return req.map(w => ({ data: w.spec, eTags: { k1: `${w.spec}-eTag` } }))
   })
   const client = new Client({ callServer })
   const remove1 = client.watch('A', () => {})
@@ -41,7 +41,7 @@ test('watching', async () => {
 
 test('batch', async () => {
   const callServer = jest.fn(req => {
-    return req.map(s => ({ result: s.spec.toLowerCase() }))
+    return req.map(s => ({ data: s.spec.toLowerCase() }))
   })
   const client = new Client({ callServer })
   const p1 = client.query('A')

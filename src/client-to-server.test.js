@@ -22,7 +22,7 @@ test('mutate-and-eTags', async () => {
   client2.watch({ templateById: { $args: 'demo/new', id: true, count: true } }, () => {})
   await delay(10)
   expect(serverRes[0]).toEqual({
-    result: { $type: 'Queries', templateById: { id: 'demo/new', $type: 'Template' } },
+    data: { $type: 'Queries', templateById: { id: 'demo/new', $type: 'Template' } },
     eTags: { Template: null },
   })
 
@@ -37,11 +37,11 @@ test('mutate-and-eTags', async () => {
   )
   expect(serverRes).toEqual([
     {
-      result: { $type: 'Mutations', setTemplateById: { id: 'demo/new', count: 1, $type: 'Template' } },
+      data: { $type: 'Mutations', setTemplateById: { id: 'demo/new', count: 1, $type: 'Template' } },
       eTags: undefined,
     },
     {
-      result: { $type: 'Queries', templateById: { $type: 'Template', id: 'demo/new', count: 1 } },
+      data: { $type: 'Queries', templateById: { $type: 'Template', id: 'demo/new', count: 1 } },
       eTags: { Template: expect.any(String) },
     },
   ])
@@ -55,7 +55,7 @@ test('mutate-and-eTags', async () => {
   expect(serverRes).toMatchObject([
     {
       eTags: { Template: expect.any(String) },
-      result: { $type: 'Queries', templateById: { $type: 'Template', count: 1, id: 'demo/new' } },
+      data: { $type: 'Queries', templateById: { $type: 'Template', count: 1, id: 'demo/new' } },
     },
   ])
 })
