@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.9.13](https://github.com/dotql/dotql/compare/v0.9.12...v0.9.13) (2019-06-17)
+
+
+### Bug Fixes
+
+* Client extends RxMap. RxMap extends Object ([9566db5](https://github.com/dotql/dotql/commit/9566db5))
+* rename res result to data, catch throw error ([a223abf](https://github.com/dotql/dotql/commit/a223abf))
+* RxMap can extract and restore ([9de9016](https://github.com/dotql/dotql/commit/9de9016))
+
+
+
 <a name="0.9.12"></a>
 ## [0.9.12](https://github.com/dotql/dotql/compare/v0.9.10...v0.9.12) (2019-06-12)
 
