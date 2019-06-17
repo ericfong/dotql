@@ -1,6 +1,18 @@
 import delay from 'delay'
 import RxMap from './RxMap'
 
+test('load and save', async () => {
+  const m1 = new RxMap()
+  m1.set('a', 'a1')
+  m1.setMeta('a', { setAt: 'now' })
+
+  const m2 = new RxMap()
+  m2.restore(m1.extract())
+
+  expect(m2.get('a')).toBe('a1')
+  expect(m2.getMeta('a')).toEqual({ setAt: 'now' })
+})
+
 test('get, set, watch', async () => {
   const m = new RxMap()
   // get, set

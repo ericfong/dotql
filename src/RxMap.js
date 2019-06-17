@@ -99,4 +99,18 @@ export default class RxMap {
     const newMeta = _.assign(this.metas.get(key) || {}, values)
     this.metas.set(key, newMeta)
   }
+
+  // extract & restore
+
+  extract() {
+    return {
+      map: [...this.map],
+      metas: [...this.metas],
+    }
+  }
+
+  restore(saved) {
+    this.map = new Map(saved.map)
+    this.metas = new Map(saved.metas)
+  }
 }
