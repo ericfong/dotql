@@ -15,42 +15,50 @@ export const firstEmit = (host, key, onNext, getFunc) => {
   }
 }
 
-export default class RxMap extends Map {
-  constructor(iterable) {
-    super(iterable)
+export default class RxMap {
+  constructor() {
     this.emitter = new EventEmitter()
+    this.map = new Map()
     this.metas = new Map()
   }
 
+  has(key) {
+    return this.map.has(key)
+  }
+
+  get(key) {
+    return this.map.get(key)
+  }
+
   watch(key, onNext) {
-    firstEmit(this, key, onNext, () => this.get(key))
+    firstEmit(this, key, onNext, () => this.map.get(key))
     return this.listen(key, onNext)
   }
 
   set(key, value) {
-    const oldValue = super.get(key)
+    const oldValue = this.map.get(key)
     if (oldValue !== value) {
-      super.set(key, value)
+      this.map.set(key, value)
       if (isPromise(value)) {
-        value.then(v => this.emit(key, v)).catch(err => this.emit(key, undefined, err))
+        value.then(v => this.emitter.emit(key, v)).catch(err => this.emitter.emit(key, undefined, err))
       } else {
-        this.emit(key, value)
+        this.emitter.emit(key, value)
       }
     }
     return this
   }
 
   delete(key) {
-    const hasDel = super.delete(key)
+    const hasDel = this.map.delete(key)
     if (hasDel) {
-      this.emit(key, undefined)
+      this.emitter.emit(key, undefined)
     }
     this.metas.delete(key)
     return hasDel
   }
 
   clear() {
-    super.clear()
+    this.map.clear()
     const { emitter } = this
     emitter.eventNames().forEach(key => {
       emitter.emit(key, undefined)
@@ -59,7 +67,7 @@ export default class RxMap extends Map {
   }
 
   emit(key, value) {
-    this.emitter.emit(key, value)
+    this.emit(key, value)
   }
 
   listen(key, onNext) {

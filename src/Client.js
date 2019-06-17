@@ -22,13 +22,15 @@ const singleAsync = (obj, key, asyncFunc) => {
   return doFunc()
 }
 
-export default class Client {
+export default class Client extends RxMap {
   // conf props: callServer, maxAge, channelsDidChange
   // ssrMode:true, .extract(), .restore(), ssr:false
 
   constructor(conf) {
-    Object.assign(this, conf)
-    if (!this.map) this.map = new RxMap()
+    super(conf)
+    _.forEach(conf, (v, k) => {
+      if (!this[k] || k === 'callServer') this[k] = v
+    })
 
     this.batchDebounce = _.debounce(() => this.batchCheck())
     if (this.channelsDidChange) {
@@ -44,22 +46,11 @@ export default class Client {
   }
 
   setCache(key, promise, option) {
-    this.map.set(key, promise)
+    this.set(key, promise)
     const maxAge = option.maxAge || this.maxAge
-    this.map.setMeta(key, { expires: typeof maxAge === 'number' ? Date.now() + maxAge : undefined })
+    this.setMeta(key, { expires: typeof maxAge === 'number' ? Date.now() + maxAge : undefined })
   }
 
-  has(key) {
-    return this.map.has(key)
-  }
-
-  delete(key) {
-    return this.map.delete(key)
-  }
-
-  clear() {
-    return this.map.clear()
-  }
   /* #endregion */
 
   // end-user-entry-point
@@ -69,14 +60,13 @@ export default class Client {
       return this.handle(spec, option)
     }
 
-    const { map } = this
     const key = this.toKey(spec, option)
 
     // hit cache
     let oldCache
-    if (map.has(key)) {
-      oldCache = map.get(key)
-      const expires = this.map.getMeta(key, 'expires')
+    if (this.has(key)) {
+      oldCache = this.get(key)
+      const expires = this.getMeta(key, 'expires')
       if (!(typeof expires === 'number' && Date.now() > expires)) {
         return oldCache
       }
@@ -84,7 +74,7 @@ export default class Client {
 
     const newPromise = this.handle(spec, option)
     this.setCache(key, newPromise, option)
-    this.map.setMeta(key, { spec, option })
+    this.setMeta(key, { spec, option })
     return oldCache || newPromise
   }
 
@@ -100,11 +90,11 @@ export default class Client {
     // emit cache data or error
     firstEmit(this, key, onNext, () => this.query(spec, option))
     // listen future
-    this.map.setMeta(key, { watchCount: this.map.getMeta(key, 'watchCount', 0) + 1, spec, option })
-    const removeListener = this.map.listen(key, onNext)
+    this.setMeta(key, { watchCount: this.getMeta(key, 'watchCount', 0) + 1, spec, option })
+    const removeListener = this.listen(key, onNext)
     return () => {
       removeListener()
-      this.map.setMeta(key, { watchCount: this.map.getMeta(key, 'watchCount', 0) - 1 })
+      this.setMeta(key, { watchCount: this.getMeta(key, 'watchCount', 0) - 1 })
     }
   }
 
@@ -133,7 +123,7 @@ export default class Client {
       const { batchings } = this
       this.batchings = []
       const restMetas = {}
-      this.map.metas.forEach((meta, key) => {
+      this.metas.forEach((meta, key) => {
         restMetas[key] = meta
       })
 
@@ -176,7 +166,7 @@ export default class Client {
 
     // record eTags (eTags == undefined means no change)
     if (res.eTags !== undefined) {
-      this.map.setMeta(key, { eTags: res.eTags })
+      this.setMeta(key, { eTags: res.eTags })
       if (this.channelsDidChange) this.emitChannelsDidChangeDebounce()
     }
   }
@@ -184,7 +174,7 @@ export default class Client {
   emitChannelsDidChange() {
     if (this.channelsDidChange) {
       const newETags = {}
-      this.map.metas.forEach(meta => {
+      this.metas.forEach(meta => {
         _.assign(newETags, meta.eTags)
       })
       this.eTags = this.channelsDidChange(newETags, this.eTags || {}) || newETags
