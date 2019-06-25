@@ -145,7 +145,7 @@ export default class Server {
 
   async queryOne(_body, context) {
     if (this.onEachContext) this.onEachContext(context)
-    const hasHeader = _body?.spec
+    const hasHeader = _body && _body.spec
     const { spec, notMatch } = hasHeader ? _body : { spec: _body }
 
     // check no exception validationRules for queryMaxDepth, disableAdHocQuery, disableIntrospection,

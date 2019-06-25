@@ -32,6 +32,7 @@ export default class Client extends RxMap {
       if (!this[k] || k === 'callServer') this[k] = v
     })
 
+    this.batchings = []
     this.batchDebounce = _.debounce(() => this.batchCheck())
     if (this.channelsDidChange) {
       this.emitChannelsDidChangeDebounce = _.debounce(() => this.emitChannelsDidChange())
@@ -101,8 +102,6 @@ export default class Client extends RxMap {
   callServer() {
     if (DEV) console.error('callServer function is missing')
   }
-
-  batchings = []
 
   // middleware-point
   handle(spec, option) {
