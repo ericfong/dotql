@@ -1,5 +1,6 @@
 export * from './util'
-export { default as fetchJson, makeJsonFetch } from './fetchJson'
+export * from './fetchJson'
+export * from './fetchWithTimeout'
 
 // server
 export { default as Server } from './Server'
