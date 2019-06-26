@@ -50,7 +50,7 @@ export const useOne = createUseWatch(DotqlContext, { oneResult: true })
 export const DotqlProvider = ({ client, children }) => createElement(DotqlContext.Provider, { value: client, children })
 export const useDotql = () => useContext(DotqlContext)
 
-export const useMutate = (func, deps = []) => {
+export const useMutate = (func, deps) => {
   const dotql = useDotql()
   return useMemo(() => {
     const mutate = (spec, option) => dotql.mutate(spec, option).then(result => fitOne(result))

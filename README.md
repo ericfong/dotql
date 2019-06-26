@@ -144,6 +144,12 @@ result = await client.query({ getUserById: { $args: 'user_01', blogs: 1 } })
 expect(result).toMatchObject({ getUserById: { $type: 'User', blogs: [{ blogId: '< user_01 >' }] } })
 ```
 
+### TODO
+
+Docs
+- eTags and channels
+- useMutate(func, deps)
+
 ### Size
 
 dotql client and server
