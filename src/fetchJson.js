@@ -18,7 +18,7 @@ export const jsonFetch = (url, option = {}, _fetch = global.fetch) => {
   option.credentials = option.credentials || 'include'
 
   return _fetch(url, option).then(res => {
-    const type = res.headers.get('Content-Type')
+    const type = res.headers.get('Content-Type') || ''
 
     // response content is JSON
     if (type.includes('/json')) {
@@ -39,7 +39,7 @@ export const jsonFetch = (url, option = {}, _fetch = global.fetch) => {
       })
     }
 
-    if (res.ok) return res
+    if (res.status >= 200 && res.status <= 399) return res
     throw createError(`${res.statusText}`, { response: res })
   })
 }
