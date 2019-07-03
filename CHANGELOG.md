@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.9.16"></a>
+## [0.9.16](https://github.com/dotql/dotql/compare/v0.9.15...v0.9.16) (2019-07-03)
+
+
+### Bug Fixes
+
+* fetch bug ([474375a](https://github.com/dotql/dotql/commit/474375a))
+* fetches ([ed35f99](https://github.com/dotql/dotql/commit/ed35f99))
+* useMutate explicit set deps ([e7b1218](https://github.com/dotql/dotql/commit/e7b1218))
+
+
+
 <a name="0.9.15"></a>
 ## [0.9.15](https://github.com/dotql/dotql/compare/v0.9.14...v0.9.15) (2019-06-25)
 
