@@ -1,6 +1,10 @@
-# Change Log
+# Changelog
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
+
+### [0.9.18](https://github.com/dotql/dotql/compare/v0.9.16...v0.9.18) (2019-07-11)
+
+
 
 <a name="0.9.17"></a>
 ## [0.9.17](https://github.com/dotql/dotql/compare/v0.9.16...v0.9.17) (2019-07-05)
