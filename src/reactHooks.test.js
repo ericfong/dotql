@@ -1,5 +1,5 @@
 import { createContext } from 'react'
-import { renderHook, act } from 'react-hooks-testing-library'
+import { renderHook, act } from '@testing-library/react-hooks'
 import { createUseWatch, RxMap } from '.'
 
 test('RxMap: createUseWatch', async () => {
